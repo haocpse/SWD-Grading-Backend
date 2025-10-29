@@ -214,3 +214,4 @@ logs/
 !README.md
 !*.ps1
 !*.sh
+*.sln
