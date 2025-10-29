@@ -1,6 +1,8 @@
-﻿namespace DAL
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace DAL
 {
-	public class Class1
+	public class SWDGradingDbContext : DbContext
 	{
 
 	}
