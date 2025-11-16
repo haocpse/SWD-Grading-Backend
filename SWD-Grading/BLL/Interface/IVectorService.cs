@@ -14,8 +14,9 @@ namespace BLL.Interface
 	{
 		Task<float[]> GenerateEmbeddingAsync(string text);
 		Task IndexDocumentAsync(long docFileId, long examId, string studentCode, string text);
-		Task<List<SimilarityPair>> SearchSimilarDocumentsAsync(long examId, float threshold);
+		Task<List<SimilarityPair>> SearchSimilarToDocumentAsync(long docFileId, long examId, float threshold);
 		Task<bool> IsDocumentIndexedAsync(long docFileId);
+		Task<long?> GetDocumentExamIdAsync(long docFileId);
 		Task EnsureCollectionExistsAsync();
 	}
 }
