@@ -50,5 +50,17 @@ namespace DAL.Repository
 			}
 		}
 
+		private IExamRepository? _examRepository;
+		public IExamRepository ExamRepository
+		{
+			get
+			{
+				if (_examRepository == null)
+				{
+					_examRepository = new ExamRepository(_context);
+				}
+				return _examRepository;
+			}
+		}
 	}
 }

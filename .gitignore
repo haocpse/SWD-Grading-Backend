@@ -215,3 +215,5 @@ logs/
 !*.ps1
 !*.sh
 *.sln
+
+**/appsettings.json

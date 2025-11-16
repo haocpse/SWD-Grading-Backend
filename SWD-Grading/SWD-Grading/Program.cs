@@ -29,12 +29,15 @@ namespace SWD_Grading
 
 			//service
 			builder.Services.AddScoped<IAuthService, AuthService>();
+			builder.Services.AddScoped<IExamService, ExamService>();
 
 			//repository
 			builder.Services.AddScoped<IUserRepository, UserRepository>();
+			builder.Services.AddScoped<IExamRepository, ExamRepository>();
 
 			//mapper
 			builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
+			builder.Services.AddAutoMapper(typeof(ExamProfile).Assembly);
 
 			var app = builder.Build();
 

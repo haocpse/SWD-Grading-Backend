@@ -1,0 +1,20 @@
+﻿using BLL.Model.Request.Exam;
+using BLL.Model.Response;
+using BLL.Model.Response.Exam;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BLL.Interface
+{
+    public interface IExamService
+    {
+        Task<ExamResponse> CreateExam(CreateExamRequest request);
+        Task<ExamResponse?> UpdateAsync(long id, UpdateExamRequest request);
+        Task<PagingResponse<ExamResponse>> GetAllAsync(ExamFilter filter);
+        Task<ExamResponse?> GetByIdAsync(long id);
+        Task<bool> DeleteAsync(long id);
+	}
+}

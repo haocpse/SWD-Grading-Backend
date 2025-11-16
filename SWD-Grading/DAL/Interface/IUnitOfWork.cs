@@ -14,6 +14,7 @@ namespace DAL.Interface
 			where TId : notnull;
 
 		IUserRepository UserRepository { get; }
+		IExamRepository ExamRepository { get; }
 		Task<int> SaveChangesAsync();
 		Task<IDbContextTransaction> BeginTransactionAsync();
 	}
