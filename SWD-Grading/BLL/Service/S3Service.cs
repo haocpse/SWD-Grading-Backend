@@ -120,31 +120,57 @@ namespace BLL.Service
 			}
 		}
 
-		public async Task<Stream> GetFileAsync(string path)
+	public async Task<Stream> GetFileAsync(string path)
+	{
+		try
 		{
-			try
+			var request = new GetObjectRequest
 			{
-				var request = new GetObjectRequest
-				{
-					BucketName = _awsConfig.BucketName,
-					Key = path
-				};
+				BucketName = _awsConfig.BucketName,
+				Key = path
+			};
 
-				var response = await _s3Client.GetObjectAsync(request);
-				var memoryStream = new MemoryStream();
-				await response.ResponseStream.CopyToAsync(memoryStream);
-				memoryStream.Position = 0;
-				return memoryStream;
-			}
-			catch (AmazonS3Exception ex)
-			{
-				throw new Exception($"Error getting file from S3: {ex.Message}", ex);
-			}
-			catch (Exception ex)
-			{
-				throw new Exception($"Unexpected error getting file: {ex.Message}", ex);
-			}
+			var response = await _s3Client.GetObjectAsync(request);
+			var memoryStream = new MemoryStream();
+			await response.ResponseStream.CopyToAsync(memoryStream);
+			memoryStream.Position = 0;
+			return memoryStream;
+		}
+		catch (AmazonS3Exception ex)
+		{
+			throw new Exception($"Error getting file from S3: {ex.Message}", ex);
+		}
+		catch (Exception ex)
+		{
+			throw new Exception($"Unexpected error getting file: {ex.Message}", ex);
 		}
 	}
+
+	public string GetPresignedUrl(string s3Key, int expiryMinutes = 60)
+	{
+		try
+		{
+			if (string.IsNullOrWhiteSpace(s3Key))
+			{
+				return string.Empty;
+			}
+
+			var request = new GetPreSignedUrlRequest
+			{
+				BucketName = _awsConfig.BucketName,
+				Key = s3Key,
+				Expires = DateTime.UtcNow.AddMinutes(expiryMinutes),
+				Verb = HttpVerb.GET
+			};
+
+			return _s3Client.GetPreSignedURL(request);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error generating presigned URL: {ex.Message}");
+			return string.Empty;
+		}
+	}
+}
 }
 

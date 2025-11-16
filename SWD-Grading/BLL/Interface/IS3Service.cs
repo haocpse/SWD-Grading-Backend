@@ -24,15 +24,22 @@ namespace BLL.Interface
 		/// <returns>True if successful</returns>
 		Task<bool> DeleteFileAsync(string path);
 
-		/// <summary>
-		/// Get file stream from S3
-		/// </summary>
-		/// <param name="path">Full S3 path to the file</param>
-		/// <returns>File stream</returns>
-		Task<Stream> GetFileAsync(string path);
+	/// <summary>
+	/// Get file stream from S3
+	/// </summary>
+	/// <param name="path">Full S3 path to the file</param>
+	/// <returns>File stream</returns>
+	Task<Stream> GetFileAsync(string path);
 
+	Task<string> UploadImageAsync(Stream fileStream, string fileName, string path);
 
-		Task<string> UploadImageAsync(Stream fileStream, string fileName, string path);
-	}
+	/// <summary>
+	/// Generate a presigned URL for temporary access to a file
+	/// </summary>
+	/// <param name="s3Key">S3 key/path to the file</param>
+	/// <param name="expiryMinutes">URL expiry time in minutes (default: 60)</param>
+	/// <returns>Presigned URL</returns>
+	string GetPresignedUrl(string s3Key, int expiryMinutes = 60);
+}
 }
 
