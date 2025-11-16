@@ -1,0 +1,24 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost,1433;Database=SWDGradingDB;User Id=sa;Password=YourStr0ng!Pass;TrustServerCertificate=True;Encrypt=False;"
+  },
+  "AWS": {
+    "BucketName": "your-bucket-name",
+    "Region": "ap-southeast-1",
+    "AccessKey": "your-access-key",
+    "SecretKey": "your-secret-key"
+  },
+  "FileUpload": {
+    "MaxFileSizeMB": 500,
+    "AllowedExtensions": [".zip"],
+    "TempStoragePath": "temp/uploads"
+  }
+}
+

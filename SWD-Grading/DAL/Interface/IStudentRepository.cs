@@ -7,10 +7,9 @@ using System.Threading.Tasks;
 
 namespace DAL.Interface
 {
-	public interface IExamRepository : IGenericRepository<Exam, long>
+	public interface IStudentRepository : IGenericRepository<Student, long>
 	{
-		Task<Exam?> GetByIdAsync(long id);
-		Task<Exam?> GetByExamCodeAsync(string examCode);
+		Task<Student?> GetByStudentCodeAsync(string studentCode);
 	}
 }
 

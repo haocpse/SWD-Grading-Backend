@@ -1,4 +1,5 @@
 
+using Amazon.S3;
 using BLL.Interface;
 using BLL.Mapper;
 using BLL.Service;
@@ -22,20 +23,35 @@ namespace SWD_Grading
 			builder.Services.AddEndpointsApiExplorer();
 			builder.Services.AddSwaggerGen();
 
+			// Database Context
 			builder.Services.AddDbContext<SWDGradingDbContext>(options =>
 				options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+			
+			// Unit of Work and Generic Repository
 			builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 			builder.Services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
 
-			//service
+			// AWS S3 Configuration
+			builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+			builder.Services.AddAWSService<IAmazonS3>();
+
+			// Services
 			builder.Services.AddScoped<IAuthService, AuthService>();
 			builder.Services.AddScoped<IExamService, ExamService>();
+			builder.Services.AddScoped<IS3Service, S3Service>();
+			builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
+			builder.Services.AddScoped<IExamUploadService, ExamUploadService>();
+			builder.Services.AddHostedService<BackgroundJobService>();
 
-			//repository
+			// Repositories
 			builder.Services.AddScoped<IUserRepository, UserRepository>();
+			builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 			builder.Services.AddScoped<IExamRepository, ExamRepository>();
+			builder.Services.AddScoped<IExamZipRepository, ExamZipRepository>();
+			builder.Services.AddScoped<IExamStudentRepository, ExamStudentRepository>();
+			builder.Services.AddScoped<IDocFileRepository, DocFileRepository>();
 
-			//mapper
+			// AutoMapper
 			builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(ExamProfile).Assembly);
 

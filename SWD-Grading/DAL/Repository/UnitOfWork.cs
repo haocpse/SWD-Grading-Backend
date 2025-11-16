@@ -50,6 +50,19 @@ namespace DAL.Repository
 			}
 		}
 
+		private IStudentRepository? _studentRepository;
+		public IStudentRepository StudentRepository
+		{
+			get
+			{
+				if (_studentRepository == null)
+				{
+					_studentRepository = new StudentRepository(_context);
+				}
+				return _studentRepository;
+			}
+		}
+
 		private IExamRepository? _examRepository;
 		public IExamRepository ExamRepository
 		{
@@ -62,5 +75,45 @@ namespace DAL.Repository
 				return _examRepository;
 			}
 		}
+
+		private IExamZipRepository? _examZipRepository;
+		public IExamZipRepository ExamZipRepository
+		{
+			get
+			{
+				if (_examZipRepository == null)
+				{
+					_examZipRepository = new ExamZipRepository(_context);
+				}
+				return _examZipRepository;
+			}
+		}
+
+		private IExamStudentRepository? _examStudentRepository;
+		public IExamStudentRepository ExamStudentRepository
+		{
+			get
+			{
+				if (_examStudentRepository == null)
+				{
+					_examStudentRepository = new ExamStudentRepository(_context);
+				}
+				return _examStudentRepository;
+			}
+		}
+
+		private IDocFileRepository? _docFileRepository;
+		public IDocFileRepository DocFileRepository
+		{
+			get
+			{
+				if (_docFileRepository == null)
+				{
+					_docFileRepository = new DocFileRepository(_context);
+				}
+				return _docFileRepository;
+			}
+		}
+
 	}
 }
