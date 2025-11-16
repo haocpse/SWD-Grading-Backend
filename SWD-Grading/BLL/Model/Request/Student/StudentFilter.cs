@@ -6,12 +6,9 @@ using System.Threading.Tasks;
 
 namespace BLL.Model.Request.Student
 {
-	public class CreateStudentRequest
+	public class StudentFilter
 	{
-
-		public string StudentCode { get; set; } = null!;
-		public string? FullName { get; set; }
-		public string? Email { get; set; }
-
+		public int Page { get; set; } = 1;
+		public int Size { get; set; } = 10;
 	}
 }
