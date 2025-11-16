@@ -19,6 +19,7 @@ namespace DAL.Interface
 		IExamZipRepository ExamZipRepository { get; }
 		IExamStudentRepository ExamStudentRepository { get; }
 		IDocFileRepository DocFileRepository { get; }
+		ISimilarityCheckRepository SimilarityCheckRepository { get; }
 		
 		Task<int> SaveChangesAsync();
 		Task<IDbContextTransaction> BeginTransactionAsync();
