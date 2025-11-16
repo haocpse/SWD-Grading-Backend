@@ -22,7 +22,7 @@ namespace SWD_Grading.Controllers
 		{
 			_examService = examService;
 			_ocrService = ocrService;
-		    _examStudentService = examStudentService;
+			_examStudentService = examStudentService;
 		}
 
 		[HttpPost]
@@ -59,7 +59,7 @@ namespace SWD_Grading.Controllers
 			BaseResponse<ExamResponse?> response = new()
 			{
 				Code = 200,
-				Message =  "Get exam successfully",
+				Message = "Get exam successfully",
 				Data = result
 			};
 
@@ -74,27 +74,27 @@ namespace SWD_Grading.Controllers
 			BaseResponse<ExamResponse?> response = new()
 			{
 				Code = 200,
-				Message =  "Update exam successfully",
+				Message = "Update exam successfully",
 				Data = result
 			};
 
 			return Ok(response);
 		}
 
-	[HttpDelete("{id}")]
-	public async Task<IActionResult> DeleteExam(long id)
-	{
-		var success = await _examService.DeleteAsync(id);
-
-		BaseResponse<bool> response = new()
+		[HttpDelete("{id}")]
+		public async Task<IActionResult> DeleteExam(long id)
 		{
-			Code = 204,
-			Message = "Delete exam successfully",
-			Data = success
-		};
+			var success = await _examService.DeleteAsync(id);
 
-		return NoContent();
-	}
+			BaseResponse<bool> response = new()
+			{
+				Code = 204,
+				Message = "Delete exam successfully",
+				Data = success
+			};
+
+			return NoContent();
+		}
 
 
 		[HttpPut("{id}/description")]
@@ -143,18 +143,19 @@ namespace SWD_Grading.Controllers
 			});
 		}
 
-	[HttpGet("{examId}/students")]
-	public async Task<IActionResult> GetExamStudents(long examId, [FromQuery] ExamStudentFilter filter)
-	{
-		var result = await _examStudentService.GetExamStudentsByExamIdAsync(examId, filter);
-
-		BaseResponse<PagingResponse<ExamStudentResponse>> response = new()
+		[HttpGet("{examId}/students")]
+		public async Task<IActionResult> GetExamStudents(long examId, [FromQuery] ExamStudentFilter filter)
 		{
-			Code = 200,
-			Message = "Get exam students successfully",
-			Data = result
-		};
+			var result = await _examStudentService.GetExamStudentsByExamIdAsync(examId, filter);
 
-		return Ok(response);
+			BaseResponse<PagingResponse<ExamStudentResponse>> response = new()
+			{
+				Code = 200,
+				Message = "Get exam students successfully",
+				Data = result
+			};
+
+			return Ok(response);
+		}
 	}
 }
