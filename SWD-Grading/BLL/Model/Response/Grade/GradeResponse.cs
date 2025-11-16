@@ -17,7 +17,7 @@ namespace BLL.Model.Response.Grade
         public decimal TotalScore { get; set; }
 
         public string? Comment { get; set; }
-
+        public int Attempt { get; set; }
         public DateTime? GradedAt { get; set; }
         public string? GradedBy { get; set; }
         public string Status { get; set; }

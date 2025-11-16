@@ -32,7 +32,8 @@ namespace Model.Entity
 
 		[MaxLength(100)]
 		public string? GradedBy { get; set; }
-		public GradeStatus Status { get; set; } 
+        public int Attempt { get; set; }
+        public GradeStatus Status { get; set; } 
         public List<GradeDetail> Details { get; set; } = new();
 	}
 }
