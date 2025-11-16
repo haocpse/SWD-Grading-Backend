@@ -153,5 +153,31 @@ namespace DAL.Repository
 				return _rubricRepository;
 			}
 		}
+
+		private IGradeDetailRepository _gradeDetailRepository;
+		public IGradeDetailRepository GradeDetailRepository
+		{
+			get
+			{
+				if (_gradeDetailRepository == null)
+				{
+					_gradeDetailRepository = new GradeDetailRepository(_context);
+				}
+				return _gradeDetailRepository;
+			}
+		}
+
+		private IGradeRepository _gradeRepository;
+		public IGradeRepository GradeRepository
+		{
+			get
+			{
+				if (_gradeRepository == null)
+				{
+					_gradeRepository = new GradeRepository(_context);
+				}
+				return _gradeRepository;
+			}
+		}
 	}
 }

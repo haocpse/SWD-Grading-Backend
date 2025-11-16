@@ -233,7 +233,11 @@ namespace DAL
 				entity.Property(e => e.GradedBy)
 					  .HasMaxLength(100);
 
-				entity.HasOne(e => e.ExamStudent)
+                entity.Property(e => e.Status)
+					  .HasConversion<string>()
+					  .HasMaxLength(20);
+
+                entity.HasOne(e => e.ExamStudent)
 					  .WithMany(es => es.Grades)
 					  .HasForeignKey(e => e.ExamStudentId)
 					  .OnDelete(DeleteBehavior.Cascade);
