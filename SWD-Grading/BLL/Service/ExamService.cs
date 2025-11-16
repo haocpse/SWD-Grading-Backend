@@ -22,6 +22,7 @@ using BLL.Model.Response.ExamQuestion;
 using BLL.Model.Response.Rubric;
 using Amazon.Runtime.Telemetry.Tracing;
 using Grpc.Core;
+using BLL.Model.Request.Grade;
 
 namespace BLL.Service
 {
@@ -29,14 +30,19 @@ namespace BLL.Service
 	{
 		private readonly IUnitOfWork _unitOfWork;
 		private readonly IMapper _mapper;
-		public ExamService(IUnitOfWork unitOfWork, IMapper mapper)
+		private readonly IGradeService _gradeService;
+		public ExamService(IUnitOfWork unitOfWork, IMapper mapper, IGradeService gradeService)
 		{
 			_unitOfWork = unitOfWork;
 			_mapper = mapper;
+			_gradeService = gradeService;
 		}
 
 		public async Task<ExamResponse> CreateExam(CreateExamRequest request)
-		{
+		{		
+			bool isDuplicatedCode =  await _unitOfWork.ExamRepository.GetByExamCodeAsync(request.ExamCode) == null ? false : true;
+			if (isDuplicatedCode)
+				throw new AppException("Duplicated exam code", 400);
 			Exam exam = _mapper.Map<Exam>(request);
 			await _unitOfWork.ExamRepository.AddAsync(exam);
 			await _unitOfWork.SaveChangesAsync();
@@ -248,7 +254,12 @@ namespace BLL.Service
 			}	
 
 			if (saved)
+			{
 				await _unitOfWork.SaveChangesAsync();
+				if (examStudents.Count > 0)
+					await CreateGradeForExamStudent(examId, examStudents);
+			}
+				
 		}
 
 		private async Task<User> GetOrCreateTeacherAsync(string teacherCode)
@@ -350,7 +361,25 @@ namespace BLL.Service
 			return response;
 		}
 
+		private async Task CreateGradeForExamStudent(long examId, List<ExamStudent> students)
+		{
+			var requests = new List<AddGradeRangeRequest>();
+			foreach (var student in students)
+			{
+				requests.Add(new AddGradeRangeRequest
+				{
+					ExamStudentId = student.Id, 
+					TotalScore = 0,        
+					Comment = "",
+					GradedAt = DateTime.UtcNow,
+					GradedBy = null,
+					Attempt = 1,
+					Status = GradeStatus.CREATED
+				});
+			}
 
+			await _gradeService.CreateRange(examId, requests);
+		}
 
 	}
 }

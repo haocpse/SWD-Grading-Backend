@@ -13,7 +13,7 @@ namespace BLL.Model.Request.Grade
     {
         public long GradeId { get; set; }
         public long RubricId { get; set; }
-        public decimal Score { get; set; }
+        public decimal Score { get; set; } = 0;
         public string? Comment { get; set; }
         public string? AutoDetectResult { get; set; }
     }

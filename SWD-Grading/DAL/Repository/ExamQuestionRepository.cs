@@ -41,6 +41,7 @@ namespace DAL.Repository
 		public async Task<IEnumerable<ExamQuestion>> GetQuestionByExamId(long examId)
 		{
 			return await _context.ExamQuestions
+				.Include(q => q.Rubrics) 
 				.Where(q => q.ExamId == examId)
 				.OrderBy(q => q.QuestionNumber)
 				.ToListAsync();
