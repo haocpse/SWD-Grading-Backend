@@ -233,14 +233,11 @@ namespace DAL
                 entity.Property(e => e.GradedBy)
                       .HasMaxLength(100);
 
-                // XÓA dòng này - để EF Core tự động map enum sang int
-                // entity.Property(e => e.Status)
-                //	  .HasConversion<string>()
-                //	  .HasMaxLength(20);
+                entity.Property(e => e.Attempt) 
+                .IsRequired();
 
-                // Hoặc nếu muốn rõ ràng, dùng:
                 entity.Property(e => e.Status)
-                      .HasConversion<int>(); // Enum → INT
+                      .HasConversion<int>();
 
                 entity.HasOne(e => e.ExamStudent)
                       .WithMany(es => es.Grades)
