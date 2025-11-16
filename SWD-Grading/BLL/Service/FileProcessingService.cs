@@ -69,8 +69,30 @@ namespace BLL.Service
 					ZipFile.ExtractToDirectory(examZip.ZipPath, tempExtractPath);
 					examZip.ExtractedPath = tempExtractPath;
 
+					// Find Student_Solutions folder (it might be at root or inside another folder)
+					string studentSolutionsPath = tempExtractPath;
+					var possiblePaths = new[]
+					{
+						Path.Combine(tempExtractPath, "Student_Solutions"),
+						tempExtractPath
+					};
+
+					// Try to find Student_Solutions folder
+					foreach (var path in possiblePaths)
+					{
+						if (Directory.Exists(path))
+						{
+							var dirs = Directory.GetDirectories(path);
+							if (dirs.Length > 0)
+							{
+								studentSolutionsPath = path;
+								break;
+							}
+						}
+					}
+
 					// Get all student folders
-					var studentFolders = Directory.GetDirectories(tempExtractPath);
+					var studentFolders = Directory.GetDirectories(studentSolutionsPath);
 					processSummary.AppendLine($"Found {studentFolders.Length} student folders");
 
 					foreach (var studentFolder in studentFolders)
@@ -104,8 +126,8 @@ namespace BLL.Service
 				}
 				finally
 				{
-					// Cleanup temp directory
-					if (Directory.Exists(tempExtractPath))
+					// Cleanup temp directory after processing
+					if (!string.IsNullOrEmpty(tempExtractPath) && Directory.Exists(tempExtractPath))
 					{
 						try
 						{
@@ -114,6 +136,19 @@ namespace BLL.Service
 						catch (Exception ex)
 						{
 							Console.WriteLine($"Error cleaning up temp directory: {ex.Message}");
+						}
+					}
+
+					// Delete uploaded ZIP file
+					if (!string.IsNullOrEmpty(examZip.ZipPath) && File.Exists(examZip.ZipPath))
+					{
+						try
+						{
+							File.Delete(examZip.ZipPath);
+						}
+						catch (Exception ex)
+						{
+							Console.WriteLine($"Error deleting ZIP file: {ex.Message}");
 						}
 					}
 				}
@@ -178,123 +213,128 @@ namespace BLL.Service
 				return;
 			}
 
-			// Look for solution.zip inside "0" folder
-			var solutionZipPath = Path.Combine(zeroFolderPath, "solution.zip");
-			if (!File.Exists(solutionZipPath))
-			{
-				examStudent.Status = ExamStudentStatus.NOT_FOUND;
-				examStudent.Note = "solution.zip not found in folder '0'";
-				await _unitOfWork.SaveChangesAsync();
-				return;
-			}
-
-			// Upload solution.zip to S3
 			var s3Path = $"{exam.ExamCode}/{studentCode}";
-			string solutionZipS3Url;
-			using (var zipFileStream = File.OpenRead(solutionZipPath))
+			
+			// Check for .docx files directly in folder "0" first
+			var existingDocxFiles = Directory.GetFiles(zeroFolderPath, "*.docx", SearchOption.TopDirectoryOnly)
+				.Where(f => !Path.GetFileName(f).StartsWith("~$")) // Exclude temp Word files
+				.ToList();
+
+			// Check for solution.zip
+			var solutionZipPath = Path.Combine(zeroFolderPath, "solution.zip");
+			var hasSolutionZip = File.Exists(solutionZipPath);
+
+			// Upload solution.zip to S3 if exists
+			string? solutionZipS3Url = null;
+			if (hasSolutionZip)
 			{
-				solutionZipS3Url = await _s3Service.UploadFileAsync(zipFileStream, "solution.zip", s3Path);
+				using (var zipFileStream = File.OpenRead(solutionZipPath))
+				{
+					solutionZipS3Url = await _s3Service.UploadFileAsync(zipFileStream, "solution.zip", s3Path);
+				}
 			}
 
-			// Extract solution.zip to temp folder
-			var tempSolutionExtractPath = Path.Combine(Path.GetTempPath(), $"solution_{Guid.NewGuid()}");
-			Directory.CreateDirectory(tempSolutionExtractPath);
+			List<string> allWordFiles = new List<string>();
 
-			try
+			// Add existing .docx files from folder 0
+			allWordFiles.AddRange(existingDocxFiles);
+
+			// Extract solution.zip if exists to find more .docx files
+			if (hasSolutionZip)
 			{
-				ZipFile.ExtractToDirectory(solutionZipPath, tempSolutionExtractPath);
+				var tempSolutionExtractPath = Path.Combine(Path.GetTempPath(), $"solution_{Guid.NewGuid()}");
+				Directory.CreateDirectory(tempSolutionExtractPath);
 
-				// Find all .docx files
-				var wordFiles = Directory.GetFiles(tempSolutionExtractPath, "*.docx", SearchOption.AllDirectories)
-					.Where(f => !Path.GetFileName(f).StartsWith("~$")) // Exclude temp Word files
-					.ToList();
-
-				if (wordFiles.Count == 0)
+				try
 				{
-					// No Word files found
-					examStudent.Status = ExamStudentStatus.NOT_FOUND;
-					examStudent.Note = "No .docx files found in solution.zip";
+					ZipFile.ExtractToDirectory(solutionZipPath, tempSolutionExtractPath);
 
-					// Still create DocFile record with NOT_FOUND status
-					var docFileNotFound = new DocFile
-					{
-						ExamStudentId = examStudent.Id,
-						ExamZipId = examZip.Id,
-						FileName = "solution.zip",
-						FilePath = solutionZipS3Url,
-						ParsedText = null,
-						ParseStatus = DocParseStatus.NOT_FOUND,
-						ParseMessage = "No Word document found in ZIP"
-					};
-					await _unitOfWork.DocFileRepository.AddAsync(docFileNotFound);
+					// Find all .docx files in extracted ZIP
+					var wordFilesInZip = Directory.GetFiles(tempSolutionExtractPath, "*.docx", SearchOption.AllDirectories)
+						.Where(f => !Path.GetFileName(f).StartsWith("~$"))
+						.ToList();
+
+					allWordFiles.AddRange(wordFilesInZip);
 				}
-				else
+				catch (Exception ex)
 				{
-					// Process each Word file
-					foreach (var wordFilePath in wordFiles)
+					Console.WriteLine($"Error extracting solution.zip: {ex.Message}");
+				}
+			}
+
+			// Process all Word files found
+			if (allWordFiles.Count == 0)
+			{
+				// No Word files found
+				examStudent.Status = ExamStudentStatus.NOT_FOUND;
+				examStudent.Note = hasSolutionZip 
+					? "No .docx files found in folder '0' or solution.zip" 
+					: "solution.zip not found and no .docx files in folder '0'";
+
+				// Still create DocFile record with NOT_FOUND status
+				var docFileNotFound = new DocFile
+				{
+					ExamStudentId = examStudent.Id,
+					ExamZipId = examZip.Id,
+					FileName = hasSolutionZip ? "solution.zip" : "N/A",
+					FilePath = solutionZipS3Url ?? "N/A",
+					ParsedText = null,
+					ParseStatus = DocParseStatus.NOT_FOUND,
+					ParseMessage = examStudent.Note
+				};
+				await _unitOfWork.DocFileRepository.AddAsync(docFileNotFound);
+			}
+			else
+			{
+				// Process each Word file
+				foreach (var wordFilePath in allWordFiles)
+				{
+					var fileName = Path.GetFileName(wordFilePath);
+
+					// Upload Word file to S3
+					string wordFileS3Url;
+					using (var wordFileStream = File.OpenRead(wordFilePath))
 					{
-						var fileName = Path.GetFileName(wordFilePath);
-
-						// Upload Word file to S3
-						string wordFileS3Url;
-						using (var wordFileStream = File.OpenRead(wordFilePath))
-						{
-							wordFileS3Url = await _s3Service.UploadFileAsync(wordFileStream, fileName, s3Path);
-						}
-
-						// Extract text from Word document
-						string extractedText = null;
-						string parseMessage = null;
-						DocParseStatus parseStatus;
-
-						try
-						{
-							extractedText = ExtractTextFromWord(wordFilePath);
-							parseStatus = DocParseStatus.OK;
-							parseMessage = "Successfully parsed";
-						}
-						catch (Exception ex)
-						{
-							parseStatus = DocParseStatus.ERROR;
-							parseMessage = $"Error parsing Word document: {ex.Message}";
-						}
-
-						// Create DocFile record
-						var docFile = new DocFile
-						{
-							ExamStudentId = examStudent.Id,
-							ExamZipId = examZip.Id,
-							FileName = fileName,
-							FilePath = wordFileS3Url,
-							ParsedText = extractedText,
-							ParseStatus = parseStatus,
-							ParseMessage = parseMessage
-						};
-						await _unitOfWork.DocFileRepository.AddAsync(docFile);
+						wordFileS3Url = await _s3Service.UploadFileAsync(wordFileStream, fileName, s3Path);
 					}
 
-					// Update ExamStudent status
-					examStudent.Status = ExamStudentStatus.PARSED;
-					examStudent.Note = $"Processed {wordFiles.Count} Word file(s)";
-				}
+					// Extract text from Word document
+					string? extractedText = null;
+					string? parseMessage = null;
+					DocParseStatus parseStatus;
 
-				await _unitOfWork.SaveChangesAsync();
-			}
-			finally
-			{
-				// Cleanup temp solution extraction folder
-				if (Directory.Exists(tempSolutionExtractPath))
-				{
 					try
 					{
-						Directory.Delete(tempSolutionExtractPath, true);
+						extractedText = ExtractTextFromWord(wordFilePath);
+						parseStatus = DocParseStatus.OK;
+						parseMessage = "Successfully parsed";
 					}
 					catch (Exception ex)
 					{
-						Console.WriteLine($"Error cleaning up solution temp directory: {ex.Message}");
+						parseStatus = DocParseStatus.ERROR;
+						parseMessage = $"Error parsing Word document: {ex.Message}";
 					}
+
+					// Create DocFile record
+					var docFile = new DocFile
+					{
+						ExamStudentId = examStudent.Id,
+						ExamZipId = examZip.Id,
+						FileName = fileName,
+						FilePath = wordFileS3Url,
+						ParsedText = extractedText,
+						ParseStatus = parseStatus,
+						ParseMessage = parseMessage
+					};
+					await _unitOfWork.DocFileRepository.AddAsync(docFile);
 				}
+
+				// Update ExamStudent status
+				examStudent.Status = ExamStudentStatus.PARSED;
+				examStudent.Note = $"Processed {allWordFiles.Count} Word file(s)";
 			}
+
+			await _unitOfWork.SaveChangesAsync();
 		}
 
 		private string ExtractStudentCode(string folderName)

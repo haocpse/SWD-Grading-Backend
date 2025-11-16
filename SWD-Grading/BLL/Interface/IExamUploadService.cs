@@ -11,13 +11,12 @@ namespace BLL.Interface
 	public interface IExamUploadService
 	{
 		/// <summary>
-		/// Initiate upload of student solutions ZIP file
+		/// Initiate upload of ZIP file containing Student_Solutions folder
 		/// </summary>
-		/// <param name="zipFile">ZIP file containing student solutions</param>
+		/// <param name="zipFile">ZIP file containing Student_Solutions folder</param>
 		/// <param name="examId">Exam ID</param>
-		/// <param name="examCode">Exam code for S3 path structure</param>
 		/// <returns>ExamZip ID</returns>
-		Task<long> InitiateUploadAsync(IFormFile zipFile, long examId, string examCode);
+		Task<long> InitiateUploadAsync(IFormFile zipFile, long examId);
 
 		/// <summary>
 		/// Get processing status of an exam ZIP upload

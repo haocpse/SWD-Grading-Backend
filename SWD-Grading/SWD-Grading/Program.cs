@@ -18,6 +18,16 @@ namespace SWD_Grading
 
 			// Add services to the container.
 
+			builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+			{
+				options.MultipartBodyLengthLimit = 524288000; 
+			});
+
+			builder.WebHost.ConfigureKestrel(options =>
+			{
+				options.Limits.MaxRequestBodySize = 524288000; 
+			});
+
 			builder.Services.AddControllers();
 			// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 			builder.Services.AddEndpointsApiExplorer();
@@ -31,9 +41,18 @@ namespace SWD_Grading
 			builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 			builder.Services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
 
-			// AWS S3 Configuration
-			builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
-			builder.Services.AddAWSService<IAmazonS3>();
+		// AWS S3 Configuration
+		var awsOptions = builder.Configuration.GetAWSOptions();
+		var awsConfig = builder.Configuration.GetSection("AWS");
+		
+		awsOptions.Credentials = new Amazon.Runtime.BasicAWSCredentials(
+			awsConfig["AccessKey"],
+			awsConfig["SecretKey"]
+		);
+		awsOptions.Region = Amazon.RegionEndpoint.GetBySystemName(awsConfig["Region"]);
+		
+		builder.Services.AddDefaultAWSOptions(awsOptions);
+		builder.Services.AddAWSService<IAmazonS3>();
 
 			// Services
 			builder.Services.AddScoped<IAuthService, AuthService>();

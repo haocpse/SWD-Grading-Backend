@@ -28,7 +28,7 @@ namespace BLL.Service
 			configuration.GetSection("FileUpload").Bind(_fileUploadConfig);
 		}
 
-		public async Task<long> InitiateUploadAsync(IFormFile zipFile, long examId, string examCode)
+		public async Task<long> InitiateUploadAsync(IFormFile zipFile, long examId)
 		{
 			// Validate file
 			if (zipFile == null || zipFile.Length == 0)
@@ -38,9 +38,9 @@ namespace BLL.Service
 
 			// Check file extension
 			var extension = Path.GetExtension(zipFile.FileName).ToLower();
-			if (!_fileUploadConfig.AllowedExtensions.Contains(extension))
+			if (extension != ".zip")
 			{
-				throw new ArgumentException($"File type {extension} is not allowed. Only {string.Join(", ", _fileUploadConfig.AllowedExtensions)} are accepted.");
+				throw new ArgumentException($"File type {extension} is not allowed. Only .zip files are accepted.");
 			}
 
 			// Check file size
@@ -50,14 +50,16 @@ namespace BLL.Service
 				throw new ArgumentException($"File size exceeds maximum allowed size of {_fileUploadConfig.MaxFileSizeMB}MB");
 			}
 
-			// Verify exam exists
+			// Verify exam exists and get exam code
 			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(examId);
 			if (exam == null)
 			{
 				throw new ArgumentException($"Exam with ID {examId} not found");
 			}
 
-			// Create temp storage directory if not exists
+			var examCode = exam.ExamCode;
+
+			// Create temp storage directory for this upload
 			var tempStoragePath = _fileUploadConfig.TempStoragePath;
 			if (!Path.IsPathRooted(tempStoragePath))
 			{
@@ -71,9 +73,9 @@ namespace BLL.Service
 
 			// Save ZIP file temporarily
 			var fileName = $"{examCode}_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid()}.zip";
-			var filePath = Path.Combine(tempStoragePath, fileName);
+			var zipFilePath = Path.Combine(tempStoragePath, fileName);
 
-			using (var stream = new FileStream(filePath, FileMode.Create))
+			using (var stream = new FileStream(zipFilePath, FileMode.Create))
 			{
 				await zipFile.CopyToAsync(stream);
 			}
@@ -83,9 +85,9 @@ namespace BLL.Service
 			{
 				ExamId = examId,
 				ZipName = zipFile.FileName,
-				ZipPath = filePath,
+				ZipPath = zipFilePath, // Store ZIP file path
 				UploadedAt = DateTime.UtcNow,
-				ExtractedPath = null,
+				ExtractedPath = null, // Will be set during processing
 				ParseStatus = ParseStatus.PENDING,
 				ParseSummary = "Waiting for processing..."
 			};
