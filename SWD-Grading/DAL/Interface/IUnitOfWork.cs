@@ -19,7 +19,9 @@ namespace DAL.Interface
 		IExamZipRepository ExamZipRepository { get; }
 		IExamStudentRepository ExamStudentRepository { get; }
 		IDocFileRepository DocFileRepository { get; }
-		
+		IExamQuestionRepository ExamQuestionRepository { get; }
+		IRubricRepository RubricRepository { get; }
+
 		Task<int> SaveChangesAsync();
 		Task<IDbContextTransaction> BeginTransactionAsync();
 	}

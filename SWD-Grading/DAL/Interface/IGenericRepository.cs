@@ -26,5 +26,7 @@ namespace DAL.Interface
 		Task UpdateAsync(T entity, CancellationToken cancellationToken = default);
 
 		Task RemoveAsync(T entity, CancellationToken cancellationToken = default);
+
+		Task AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default);
 	}
 }

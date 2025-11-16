@@ -165,6 +165,8 @@ namespace SWD_Grading
 			builder.Services.AddScoped<IExamZipRepository, ExamZipRepository>();
 			builder.Services.AddScoped<IExamStudentRepository, ExamStudentRepository>();
 			builder.Services.AddScoped<IDocFileRepository, DocFileRepository>();
+            builder.Services.AddScoped<IRubricRepository, RubricRepository>();
+            builder.Services.AddScoped<IExamQuestionRepository, ExamQuestionRepository>();
 
 			// AutoMapper
 			builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);

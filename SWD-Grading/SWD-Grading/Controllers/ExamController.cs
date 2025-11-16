@@ -123,5 +123,20 @@ namespace SWD_Grading.Controllers
 			});
 		}
 
+		[HttpPost("{id}/details")]
+		[Consumes("multipart/form-data")]
+		public async Task<IActionResult> ParseDetailExcel([FromRoute] long id, IFormFile file)
+		{
+			if (file == null || file.Length == 0)
+				return BadRequest("No file uploaded.");
+
+			await _examService.ParseDetailExcel(id, file);
+
+			return Ok(new
+			{
+				message = "Import exam details successfully."
+			});
+		}
+
 	}
 }

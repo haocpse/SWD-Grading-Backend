@@ -107,5 +107,10 @@ namespace DAL.Repository
 			return Task.CompletedTask;
 		}
 
+		public async Task AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+		{
+			await _dbSet.AddRangeAsync(entities, cancellationToken);
+		}
+
 	}
 }

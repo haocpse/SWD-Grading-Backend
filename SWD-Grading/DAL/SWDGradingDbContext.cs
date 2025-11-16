@@ -92,6 +92,10 @@ namespace DAL
 					  .WithMany()
 					  .HasForeignKey(e => e.StudentId)
 					  .OnDelete(DeleteBehavior.Cascade);
+				entity.HasOne(e => e.Teacher)
+					  .WithMany()
+					  .HasForeignKey(e => e.TeacherId)
+					  .OnDelete(DeleteBehavior.Cascade);
 			});
 			modelBuilder.Entity<ExamZip>(entity =>
 			{
