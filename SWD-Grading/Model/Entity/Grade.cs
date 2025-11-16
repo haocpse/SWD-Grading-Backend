@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Model.Enums;
 
 namespace Model.Entity
 {
@@ -31,6 +32,7 @@ namespace Model.Entity
 
 		[MaxLength(100)]
 		public string? GradedBy { get; set; }
-		public List<GradeDetail> Details { get; set; } = new();
+		public GradeStatus Status { get; set; } 
+        public List<GradeDetail> Details { get; set; } = new();
 	}
 }

@@ -4,6 +4,7 @@ using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DAL.Migrations
 {
     [DbContext(typeof(SWDGradingDbContext))]
-    partial class SWDGradingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251116125347_UpdateDbContextConfiguration")]
+    partial class UpdateDbContextConfiguration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -43,9 +46,6 @@ namespace DAL.Migrations
                     b.Property<string>("FilePath")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsEmbedded")
-                        .HasColumnType("bit");
 
                     b.Property<string>("ParseMessage")
                         .HasColumnType("TEXT");
@@ -85,9 +85,6 @@ namespace DAL.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("ExamPaper")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .HasMaxLength(255)
@@ -347,12 +344,6 @@ namespace DAL.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<string>("AIVerificationResult")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("AIVerifiedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<long>("DocFile1Id")
                         .HasColumnType("bigint");
 
@@ -373,19 +364,6 @@ namespace DAL.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("TeacherNotes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("TeacherVerifiedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("TeacherVerifiedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("VerificationStatus")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("DocFile1Id");
@@ -393,8 +371,6 @@ namespace DAL.Migrations
                     b.HasIndex("DocFile2Id");
 
                     b.HasIndex("SimilarityCheckId");
-
-                    b.HasIndex("TeacherVerifiedByUserId");
 
                     b.ToTable("similarity_result", (string)null);
                 });
@@ -448,6 +424,7 @@ namespace DAL.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("TeacherCode")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Username")
@@ -607,37 +584,11 @@ namespace DAL.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Model.Entity.User", "TeacherVerifiedByUser")
-                        .WithMany()
-                        .HasForeignKey("TeacherVerifiedByUserId");
-
                     b.Navigation("DocFile1");
 
                     b.Navigation("DocFile2");
 
                     b.Navigation("SimilarityCheck");
-
-                    b.Navigation("TeacherVerifiedByUser");
-                });
-
-            modelBuilder.Entity("Model.Entity.Exam", b =>
-                {
-                    b.Navigation("Questions");
-                });
-
-            modelBuilder.Entity("Model.Entity.ExamQuestion", b =>
-                {
-                    b.Navigation("Rubrics");
-                });
-
-            modelBuilder.Entity("Model.Entity.ExamStudent", b =>
-                {
-                    b.Navigation("Grades");
-                });
-
-            modelBuilder.Entity("Model.Entity.Grade", b =>
-                {
-                    b.Navigation("Details");
                 });
 
             modelBuilder.Entity("Model.Entity.Exam", b =>

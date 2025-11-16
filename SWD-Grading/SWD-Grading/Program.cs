@@ -166,9 +166,11 @@ namespace SWD_Grading
 		
 		// Register BackgroundJobService to automatically process uploaded ZIP files
 		builder.Services.AddHostedService<BackgroundJobService>();
+        builder.Services.AddScoped<IGradeService,GradeService>();
+            builder.Services.AddScoped<IGradeDetailService,GradeDetailService>();
 
-			// Repositories
-			builder.Services.AddScoped<IUserRepository, UserRepository>();
+            // Repositories
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
 			builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 			builder.Services.AddScoped<IExamRepository, ExamRepository>();
 			builder.Services.AddScoped<IExamZipRepository, ExamZipRepository>();
@@ -177,13 +179,17 @@ namespace SWD_Grading
 			builder.Services.AddScoped<ISimilarityCheckRepository, SimilarityCheckRepository>();
             builder.Services.AddScoped<IRubricRepository, RubricRepository>();
             builder.Services.AddScoped<IExamQuestionRepository, ExamQuestionRepository>();
+            builder.Services.AddScoped<IGradeRepository, GradeRepository>();
+            builder.Services.AddScoped<IGradeDetailRepository, GradeDetailRepository>();
 
-			// AutoMapper
-			builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
+            // AutoMapper
+            builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(ExamProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(ExamQuestionProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(RubricProfile).Assembly);
-			var app = builder.Build();
+            builder.Services.AddAutoMapper(typeof(GradeProfile).Assembly);
+            builder.Services.AddAutoMapper(typeof(GradeDetailProfile).Assembly);
+            var app = builder.Build();
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())
