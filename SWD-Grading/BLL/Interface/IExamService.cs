@@ -1,6 +1,7 @@
 ﻿using BLL.Model.Request.Exam;
 using BLL.Model.Response;
 using BLL.Model.Response.Exam;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,5 +17,6 @@ namespace BLL.Interface
         Task<PagingResponse<ExamResponse>> GetAllAsync(ExamFilter filter);
         Task<ExamResponse?> GetByIdAsync(long id);
         Task<bool> DeleteAsync(long id);
+        Task ParseDetailExcel(long id, IFormFile file);
 	}
 }

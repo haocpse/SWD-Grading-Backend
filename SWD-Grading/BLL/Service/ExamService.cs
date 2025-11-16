@@ -5,6 +5,8 @@ using BLL.Model.Request.Exam;
 using BLL.Model.Response;
 using BLL.Model.Response.Exam;
 using DAL.Interface;
+using DocumentFormat.OpenXml.Packaging;
+using Microsoft.AspNetCore.Http;
 using Model.Entity;
 using OfficeOpenXml.Style;
 using System;
@@ -13,6 +15,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using DocumentFormat.OpenXml.Spreadsheet;
+using BLL.Model.Request.Student;
+using Model.Enums;
 
 namespace BLL.Service
 {
@@ -73,6 +78,189 @@ namespace BLL.Service
 			return exam == null ? 
 				throw new AppException("Exam not found", 404) : 
 				_mapper.Map<ExamResponse>(exam);
+		}
+
+		public async Task ParseDetailExcel(long examId, IFormFile file)
+		{
+			using var stream = file.OpenReadStream();
+			using var doc = SpreadsheetDocument.Open(stream, false);
+
+			var wb = doc.WorkbookPart!;
+			var sheet = wb.Workbook.Sheets!.GetFirstChild<Sheet>()!;
+			var wsPart = (WorksheetPart)wb.GetPartById(sheet.Id!);
+			var sheetData = wsPart.Worksheet.GetFirstChild<SheetData>()!;
+			var rows = sheetData.Elements<Row>().ToList();
+
+			//--------------------------------------------------------------------
+			// 1) READ PART NAME + DESCRIPTIONS → ExamQuestion + Rubric
+			//--------------------------------------------------------------------
+			Row partRow = rows[0];   // Part 1 / Part 2 / Part 3...
+			Row descRow = rows[1];   // Description
+			Row scoreRow = rows[2];  // MaxScore của từng rubric
+
+			var partCells = partRow.Elements<Cell>().ToList();
+			var descCells = descRow.Elements<Cell>().ToList();
+			var scoreCells = scoreRow.Elements<Cell>().ToList();
+
+			// Bỏ 2 cột cuối Total + Comment
+			int colCount = partCells.Count - 2;
+
+			List<ExamQuestion> questions = new();
+			List<Rubric> rubrics = new();
+
+			int questionNumber = 1;
+			ExamQuestion? currentQuestion = null;
+			decimal currentPartTotal = 0;
+
+			for (int c = 3; c < colCount; c++)
+			{
+				string partName = GetCellValue(doc, partCells[c]);
+				string desc = GetCellValue(doc, descCells[c]);
+				string scoreStr = GetCellValue(doc, scoreCells[c]);
+
+				decimal rubricMaxScore = 0;
+				decimal.TryParse(scoreStr, out rubricMaxScore);
+
+				// Nếu gặp "Part 1", "Part 2", "Part 3"
+				if (!string.IsNullOrWhiteSpace(partName))
+				{
+					// Nếu đang ở part trước → cập nhật tổng điểm
+					if (currentQuestion != null)
+					{
+						currentQuestion.MaxScore = currentPartTotal;
+					}
+
+					// Reset
+					currentPartTotal = 0;
+
+					currentQuestion = new ExamQuestion
+					{
+						ExamId = examId,
+						QuestionNumber = questionNumber++,
+						QuestionText = partName,
+						MaxScore = 0 // sẽ cập nhật sau
+					};
+
+					questions.Add(currentQuestion);
+				}
+
+				// Thêm Rubric thuộc part hiện tại
+				if (currentQuestion != null && !string.IsNullOrWhiteSpace(desc))
+				{
+					rubrics.Add(new Rubric
+					{
+						ExamQuestion = currentQuestion,
+						Criterion = desc,
+						MaxScore = rubricMaxScore,
+						OrderIndex = rubrics.Count + 1
+					});
+
+					currentPartTotal += rubricMaxScore; // cộng dồn điểm cho Part
+				}
+			}
+
+			// Sau vòng lặp, cập nhật Part cuối cùng
+			if (currentQuestion != null)
+			{
+				currentQuestion.MaxScore = currentPartTotal;
+			}
+
+			//--------------------------------------------------------------------
+			// 2) READ STUDENT + EXAMSTUDENT
+			//--------------------------------------------------------------------
+			List<Student> students = new();
+			List<ExamStudent> examStudents = new();
+
+			for (int r = 3; r < rows.Count; r++)
+			{
+				var cells = rows[r].Elements<Cell>().ToList();
+				if (cells.Count < 3) continue;
+
+				string solution = GetCellValue(doc, cells[1]); // StudentCode
+				string markerCode = GetCellValue(doc, cells[2]); // TeacherCode
+
+				if (string.IsNullOrWhiteSpace(solution))
+					continue;
+
+				//--------------------------------------------------------------
+				// Create Student
+				//--------------------------------------------------------------
+				Student student = new Student
+				{
+					StudentCode = solution,
+					FullName = solution,
+					Email = $"{solution}@fpt.edu.vn"
+				};
+				students.Add(student);
+
+				//--------------------------------------------------------------
+				// Get or create Teacher
+				//--------------------------------------------------------------
+				var teacher = await GetOrCreateTeacherAsync(markerCode);
+
+				//--------------------------------------------------------------
+				// Add ExamStudent
+				//--------------------------------------------------------------
+				examStudents.Add(new ExamStudent
+				{
+					ExamId = examId,
+					Student = student,
+					TeacherId = teacher.Id,
+					Status = ExamStudentStatus.NOT_FOUND, // default
+					Note = null
+				});
+			}
+
+			//--------------------------------------------------------------------
+			// 3) SAVE ALL → chỉ SaveChanges 1 lần cho hiệu suất
+			//--------------------------------------------------------------------
+			await _unitOfWork.StudentRepository.AddRangeAsync(students);
+			await _unitOfWork.ExamStudentRepository.AddRangeAsync(examStudents);
+			await _unitOfWork.ExamQuestionRepository.AddRangeAsync(questions);
+			await _unitOfWork.RubricRepository.AddRangeAsync(rubrics);
+
+			await _unitOfWork.SaveChangesAsync();
+		}
+
+		private async Task<User> GetOrCreateTeacherAsync(string teacherCode)
+		{
+			// Try get existing
+			var teacher = await _unitOfWork.UserRepository.GetByTeacherCodeAsync(teacherCode);
+			if (teacher != null)
+				return teacher;
+
+			// Create new
+			teacher = new User
+			{
+				Username = teacherCode,
+				TeacherCode = teacherCode,
+				PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
+				IsActive = true,
+				Role = UserRole.TEACHER
+			};
+
+			await _unitOfWork.UserRepository.AddAsync(teacher);
+
+			// VERY IMPORTANT: SAVE so EF generates Teacher.Id
+			await _unitOfWork.SaveChangesAsync();
+
+			return teacher;
+		}
+
+		private string GetCellValue(SpreadsheetDocument doc, Cell cell)
+		{
+			if (cell.CellValue == null)
+				return "";
+
+			string value = cell.CellValue.InnerText;
+
+			if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString)
+			{
+				var table = doc.WorkbookPart!.SharedStringTablePart!.SharedStringTable;
+				return table.ChildElements[int.Parse(value)].InnerText;
+			}
+
+			return value;
 		}
 
 		public async Task<ExamResponse?> UpdateAsync(long id, UpdateExamRequest request)

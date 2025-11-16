@@ -143,7 +143,16 @@ namespace SWD_Grading
 		builder.Services.AddDefaultAWSOptions(awsOptions);
 		builder.Services.AddAWSService<IAmazonS3>();
 
-		// Services
+			// Services
+			builder.Services.AddScoped<IAuthService, AuthService>();
+			builder.Services.AddScoped<IExamService, ExamService>();
+			builder.Services.AddScoped<ITesseractOcrService>(sp =>
+			{
+				var tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+				var uow = sp.GetRequiredService<IUnitOfWork>();
+
+				return new TesseractOcrService(tessdataPath, uow);
+			});
 		builder.Services.AddScoped<IAuthService, AuthService>();
 		builder.Services.AddScoped<IExamService, ExamService>();
 		builder.Services.AddScoped<IExamStudentService, ExamStudentService>();
@@ -162,6 +171,8 @@ namespace SWD_Grading
 			builder.Services.AddScoped<IExamStudentRepository, ExamStudentRepository>();
 			builder.Services.AddScoped<IDocFileRepository, DocFileRepository>();
 			builder.Services.AddScoped<ISimilarityCheckRepository, SimilarityCheckRepository>();
+            builder.Services.AddScoped<IRubricRepository, RubricRepository>();
+            builder.Services.AddScoped<IExamQuestionRepository, ExamQuestionRepository>();
 
 			// AutoMapper
 			builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);

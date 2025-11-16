@@ -26,5 +26,10 @@ namespace DAL.Repository
         {
             return await _context.Users.AnyAsync(x => x.Username == username);
         }
-    }
+		public async Task<User?> GetByTeacherCodeAsync(string teacherCode)
+		{
+			return await _context.Users
+				.FirstOrDefaultAsync(u => u.TeacherCode == teacherCode);
+		}
+	}
 }

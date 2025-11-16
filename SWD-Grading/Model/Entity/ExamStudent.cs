@@ -29,7 +29,10 @@ namespace Model.Entity
 
 		[ForeignKey(nameof(StudentId))]
 		public Student Student { get; set; } = null!;
-
+		[Required]
+		public int TeacherId { get; set; }
+		[ForeignKey(nameof(TeacherId))]
+		public User Teacher { get; set; } = null!;
 		[Required]
 		public ExamStudentStatus Status { get; set; }
 
