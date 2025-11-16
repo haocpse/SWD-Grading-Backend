@@ -6,9 +6,10 @@ namespace BLL.Interface
 {
 	public interface IPlagiarismService
 	{
-		Task<PlagiarismCheckResponse> CheckPlagiarismAsync(long examId, decimal threshold, int userId);
-		Task<List<PlagiarismCheckResponse>> GetCheckHistoryAsync(long examId);
+		Task<PlagiarismCheckResponse> CheckSuspiciousDocumentAsync(long docFileId, decimal threshold, int userId);
 		Task GenerateEmbeddingForDocFileAsync(long docFileId);
+		Task<VerificationResponse> VerifyWithAIAsync(long similarityResultId);
+		Task<VerificationResponse> TeacherVerifyAsync(long similarityResultId, bool isSimilar, string? notes, int userId);
 	}
 }
 
