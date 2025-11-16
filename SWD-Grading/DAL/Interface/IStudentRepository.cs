@@ -10,6 +10,7 @@ namespace DAL.Interface
 	public interface IStudentRepository : IGenericRepository<Student, long>
 	{
 		Task<Student?> GetByStudentCodeAsync(string studentCode);
+		Task<bool> ExistsByStudentCodeAsync(string studentCode, long? excludeId = null);
 	}
 }
 

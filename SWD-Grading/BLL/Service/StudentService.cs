@@ -28,7 +28,11 @@ namespace BLL.Service
 		public async Task<StudentResponse> CreateAsync(CreateStudentRequest request)
 		{
 			var entity = _mapper.Map<Student>(request);
+			var exists = await _uow.StudentRepository
+					.ExistsByStudentCodeAsync(request.StudentCode);
 
+			if (exists)
+				throw new AppException("StudentCode already exists", 400);
 			await _uow.StudentRepository.AddAsync(entity);
 			await _uow.SaveChangesAsync();
 
@@ -95,8 +99,13 @@ namespace BLL.Service
 		public async Task<StudentResponse?> UpdateAsync(long id, UpdateStudentRequest request)
 		{
 			var entity = await _uow.StudentRepository.GetByIdAsync(id);
-			if (entity == null) return null;
+			if (entity == null)
+				throw new AppException("Student not found", 404);
+			var exists = await _uow.StudentRepository
+				.ExistsByStudentCodeAsync(request.StudentCode, excludeId: id);
 
+			if (exists)
+				throw new AppException("StudentCode already exists", 400);
 			_mapper.Map(request, entity);
 
 			await _uow.StudentRepository.UpdateAsync(entity);

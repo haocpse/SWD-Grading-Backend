@@ -23,6 +23,17 @@ namespace DAL.Repository
 			return await _context.Set<Student>()
 				.FirstOrDefaultAsync(s => s.StudentCode == studentCode);
 		}
+
+		public async Task<bool> ExistsByStudentCodeAsync(string studentCode, long? excludeId = null)
+		{
+			var query = _context.Students.Where(x => x.StudentCode == studentCode);
+
+			if (excludeId != null)
+				query = query.Where(x => x.Id != excludeId);
+
+			return await query.AnyAsync();
+		}
+
 	}
 }
 
