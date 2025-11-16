@@ -23,8 +23,9 @@ namespace DAL.Interface
 		
 		IExamQuestionRepository ExamQuestionRepository { get; }
 		IRubricRepository RubricRepository { get; }
-
-		Task<int> SaveChangesAsync();
+		IGradeDetailRepository GradeDetailRepository { get; }
+		IGradeRepository GradeRepository { get; }
+        Task<int> SaveChangesAsync();
 		Task<IDbContextTransaction> BeginTransactionAsync();
 	}
 }
