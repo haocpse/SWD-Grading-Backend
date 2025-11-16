@@ -184,7 +184,7 @@ namespace DAL
 					  .HasMaxLength(255);
 
 				entity.HasOne(e => e.Exam)
-					  .WithMany()
+					  .WithMany(x => x.Questions)
 					  .HasForeignKey(e => e.ExamId)
 					  .OnDelete(DeleteBehavior.Cascade);
 			});
@@ -208,9 +208,10 @@ namespace DAL
 					  .IsRequired();
 
 				entity.HasOne(e => e.ExamQuestion)
-					  .WithMany()
+					  .WithMany(q => q.Rubrics)
 					  .HasForeignKey(e => e.ExamQuestionId)
 					  .OnDelete(DeleteBehavior.Cascade);
+
 			});
 			modelBuilder.Entity<Grade>(entity =>
 			{
@@ -231,7 +232,7 @@ namespace DAL
 					  .HasMaxLength(100);
 
 				entity.HasOne(e => e.ExamStudent)
-					  .WithMany()
+					  .WithMany(es => es.Grades)
 					  .HasForeignKey(e => e.ExamStudentId)
 					  .OnDelete(DeleteBehavior.Cascade);
 			});
@@ -251,7 +252,7 @@ namespace DAL
 					  .HasColumnType("TEXT");
 
 				entity.HasOne(e => e.Grade)
-					  .WithMany()
+					  .WithMany(g => g.Details)
 					  .HasForeignKey(e => e.GradeId)
 					  .OnDelete(DeleteBehavior.Cascade);
 

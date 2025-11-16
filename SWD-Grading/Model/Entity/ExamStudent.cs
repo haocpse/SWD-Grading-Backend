@@ -37,6 +37,7 @@ namespace Model.Entity
 		public ExamStudentStatus Status { get; set; }
 
 		public string? Note { get; set; }
+		public List<Grade> Grades { get; set; } = new();
 	}
 
 }

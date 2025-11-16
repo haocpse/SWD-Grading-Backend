@@ -32,5 +32,7 @@ namespace Model.Entity
 
 		[MaxLength(255)]
 		public string? RelatedDocSection { get; set; }
+
+		public List<Rubric> Rubrics { get; set; } = new();
 	}
 }

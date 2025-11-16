@@ -9,5 +9,8 @@ namespace DAL.Interface
 {
 	public interface IExamQuestionRepository : IGenericRepository<ExamQuestion, long>
 	{
+
+		Task<IEnumerable<ExamQuestion>> GetQuestionByExamId(long id);
+
 	}
 }

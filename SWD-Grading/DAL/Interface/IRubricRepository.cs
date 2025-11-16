@@ -9,5 +9,8 @@ namespace DAL.Interface
 {
 	public interface IRubricRepository : IGenericRepository<Rubric, long>
 	{
+
+
+		Task<IEnumerable<Rubric>> GetRubricByQuestionId(long id);
 	}
 }

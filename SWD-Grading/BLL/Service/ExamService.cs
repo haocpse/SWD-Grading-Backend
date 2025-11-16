@@ -18,6 +18,8 @@ using System.Threading.Tasks;
 using DocumentFormat.OpenXml.Spreadsheet;
 using BLL.Model.Request.Student;
 using Model.Enums;
+using BLL.Model.Response.ExamQuestion;
+using BLL.Model.Response.Rubric;
 
 namespace BLL.Service
 {
@@ -272,6 +274,23 @@ namespace BLL.Service
 			await _unitOfWork.ExamRepository.UpdateAsync(exam);
 			await _unitOfWork.SaveChangesAsync();
 			return _mapper.Map<ExamResponse>(exam);
+		}
+
+		public async Task<ExamResponse?> GetQuestionByExamId(long id)
+		{
+			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(id);
+			if (exam == null)
+				throw new AppException("Exam not found", 404);
+			ExamResponse response = _mapper.Map<ExamResponse>(exam);
+			IEnumerable<ExamQuestion> questions = await _unitOfWork.ExamQuestionRepository.GetQuestionByExamId(id);
+			List<ExamQuestionResponse> questionResponses = _mapper.Map<List<ExamQuestionResponse>>(questions.ToList());
+			foreach (var question in questionResponses)
+			{
+				IEnumerable<Rubric> rubrics = await _unitOfWork.RubricRepository.GetRubricByQuestionId(question.Id);
+				question.Rubrics = _mapper.Map<List<RubricResponse>>(rubrics.ToList());
+			}
+			response.Questions = questionResponses;
+			return response;
 		}
 	}
 }

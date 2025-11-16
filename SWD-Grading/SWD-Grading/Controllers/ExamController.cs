@@ -157,5 +157,20 @@ namespace SWD_Grading.Controllers
 
 			return Ok(response);
 		}
+
+		[HttpGet("{id}/questions")]
+		public async Task<IActionResult> GetQuestionsByExamId([FromRoute] long id)
+		{
+			var result = await _examService.GetQuestionByExamId(id);
+			BaseResponse<ExamResponse> response = new()
+			{
+				Code = 200,
+				Message = "Get exam questions successfully",
+				Data = result
+			};
+
+			return Ok(response);
+		}
+
 	}
 }

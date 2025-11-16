@@ -1,4 +1,5 @@
 ﻿using DAL.Interface;
+using Microsoft.EntityFrameworkCore;
 using Model.Entity;
 using System;
 using System.Collections.Generic;
@@ -18,5 +19,12 @@ namespace DAL.Repository
 			_context = context;
 		}
 
+		public async Task<IEnumerable<Rubric>> GetRubricByQuestionId(long id)
+		{
+			return await _context.Rubrics
+				.Where(q => q.ExamQuestionId == id)
+				.OrderBy(q => q.OrderIndex)
+				.ToListAsync();
+		}
 	}
 }

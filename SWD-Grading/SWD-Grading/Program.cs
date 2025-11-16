@@ -174,7 +174,8 @@ namespace SWD_Grading
 			// AutoMapper
 			builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(ExamProfile).Assembly);
-
+			builder.Services.AddAutoMapper(typeof(ExamQuestionProfile).Assembly);
+			builder.Services.AddAutoMapper(typeof(RubricProfile).Assembly);
 			var app = builder.Build();
 
 			// Configure the HTTP request pipeline.

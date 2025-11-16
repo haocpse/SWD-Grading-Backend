@@ -18,5 +18,6 @@ namespace BLL.Interface
         Task<ExamResponse?> GetByIdAsync(long id);
         Task<bool> DeleteAsync(long id);
         Task ParseDetailExcel(long id, IFormFile file);
+        Task<ExamResponse?> GetQuestionByExamId(long id);   
 	}
 }
