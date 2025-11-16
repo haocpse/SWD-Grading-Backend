@@ -1,4 +1,4 @@
-
+﻿
 using Amazon.S3;
 using BLL.Interface;
 using BLL.Mapper;
@@ -33,6 +33,31 @@ namespace SWD_Grading
 			});
 
 			builder.Services.AddControllers();
+
+            // CORS Configuration
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+
+                // Hoặc nếu bạn muốn cấu hình cụ thể hơn cho môi trường production
+                //options.AddPolicy("ProductionPolicy", policy =>
+                //{
+                //    policy.WithOrigins(
+                //            "http://localhost:3000",  // React app
+                //            "http://localhost:4200",  // Angular app
+                //            "https://yourdomain.com"  // Production domain
+                //          )
+                //          .AllowAnyMethod()
+                //          .AllowAnyHeader()
+                //          .AllowCredentials();
+                //});
+            });
+
             // JWT Configuration
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"];
@@ -147,7 +172,9 @@ namespace SWD_Grading
 				app.UseSwaggerUI();
 			}
 
-			app.UseHttpsRedirection();
+            app.UseCors("AllowAll");
+
+            app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
 
