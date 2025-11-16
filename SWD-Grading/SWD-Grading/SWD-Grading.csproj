@@ -17,8 +17,4 @@
     <ProjectReference Include="..\BLL\BLL.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="appsettings.json" />
-  </ItemGroup>
-
 </Project>
