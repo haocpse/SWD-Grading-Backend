@@ -9,5 +9,7 @@ namespace DAL.Interface
 {
     public interface IGradeRepository : IGenericRepository<Grade, long>
     {
+        Task<IEnumerable<Grade>> GetAll();
+        Task<Grade?> GetById(long id);
     }
 }

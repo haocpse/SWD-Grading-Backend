@@ -162,9 +162,10 @@ namespace SWD_Grading
 		builder.Services.AddScoped<IVectorService, VectorService>();
 		builder.Services.AddScoped<IPlagiarismService, PlagiarismService>();
 		builder.Services.AddHostedService<BackgroundJobService>();
+        builder.Services.AddScoped<IGradeService,GradeService>();
 
-			// Repositories
-			builder.Services.AddScoped<IUserRepository, UserRepository>();
+            // Repositories
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
 			builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 			builder.Services.AddScoped<IExamRepository, ExamRepository>();
 			builder.Services.AddScoped<IExamZipRepository, ExamZipRepository>();
@@ -173,13 +174,16 @@ namespace SWD_Grading
 			builder.Services.AddScoped<ISimilarityCheckRepository, SimilarityCheckRepository>();
             builder.Services.AddScoped<IRubricRepository, RubricRepository>();
             builder.Services.AddScoped<IExamQuestionRepository, ExamQuestionRepository>();
+            builder.Services.AddScoped<IGradeRepository, GradeRepository>();
+            builder.Services.AddScoped<IGradeDetailRepository, GradeDetailRepository>();
 
-			// AutoMapper
-			builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
+            // AutoMapper
+            builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(ExamProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(ExamQuestionProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(RubricProfile).Assembly);
-			var app = builder.Build();
+            builder.Services.AddAutoMapper(typeof(GradeProfile).Assembly);
+            var app = builder.Build();
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())

@@ -1,4 +1,5 @@
 ﻿using DAL.Interface;
+using Microsoft.EntityFrameworkCore;
 using Model.Entity;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,17 @@ namespace DAL.Repository
         public GradeRepository(SWDGradingDbContext context) : base(context)
         {
             _context = context;
+        }
+
+        public async Task<IEnumerable<Grade>> GetAll()
+        {
+            var grade = await _context.Grades.ToListAsync();
+            return grade;
+        }
+
+        public async Task<Grade?> GetById(long id)
+        {
+            return await _context.Grades.FirstOrDefaultAsync(g => g.Id == id);
         }
     }
 }
