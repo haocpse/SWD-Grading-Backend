@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BLL.Model.Request
+namespace BLL.Model.Request.Auth
 {
     public class LoginRequest
     {
