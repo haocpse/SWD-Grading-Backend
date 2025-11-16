@@ -143,13 +143,14 @@ namespace SWD_Grading
 		builder.Services.AddDefaultAWSOptions(awsOptions);
 		builder.Services.AddAWSService<IAmazonS3>();
 
-			// Services
-			builder.Services.AddScoped<IAuthService, AuthService>();
-			builder.Services.AddScoped<IExamService, ExamService>();
-			builder.Services.AddScoped<IS3Service, S3Service>();
-			builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
-			builder.Services.AddScoped<IExamUploadService, ExamUploadService>();
-			builder.Services.AddHostedService<BackgroundJobService>();
+		// Services
+		builder.Services.AddScoped<IAuthService, AuthService>();
+		builder.Services.AddScoped<IExamService, ExamService>();
+		builder.Services.AddScoped<IExamStudentService, ExamStudentService>();
+		builder.Services.AddScoped<IS3Service, S3Service>();
+		builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
+		builder.Services.AddScoped<IExamUploadService, ExamUploadService>();
+		builder.Services.AddHostedService<BackgroundJobService>();
 
 			// Repositories
 			builder.Services.AddScoped<IUserRepository, UserRepository>();
