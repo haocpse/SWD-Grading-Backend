@@ -2,6 +2,7 @@
 using AutoMapper;
 using BLL.Interface;
 using BLL.Model.Request;
+using BLL.Model.Request.Grade;
 using BLL.Model.Response;
 using BLL.Model.Response.Grade;
 using DAL.Interface;
@@ -51,5 +52,48 @@ namespace BLL.Service
 
             return pagedResponse;
         }
+
+        public async Task<GradeDetailResponse> GetById(long id)
+        {
+            var grade = await _unitOfWork.GradeRepository.GetById(id);
+            var gradeDetailResponse = _mapper.Map<GradeDetailResponse>(grade);
+            return gradeDetailResponse;
+        }
+
+        public async Task Create(GradeRequest request)
+        {
+            var gradeEntity = _mapper.Map<Grade>(request);
+            await _unitOfWork.GradeRepository.AddAsync(gradeEntity);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task Update(GradeRequest request, long id)
+        {
+            var existingGrade = await _unitOfWork.GradeRepository.GetById(id);
+            if (existingGrade == null)
+            {
+                throw new KeyNotFoundException("Grade not found");
+            }
+            _mapper.Map(request, existingGrade);
+            await _unitOfWork.GradeRepository.UpdateAsync(existingGrade);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task Delete(long id)
+        {
+            var existingGrade = await _unitOfWork.GradeRepository.GetById(id);
+            var existingDetails = await _unitOfWork.GradeDetailRepository.GetByGradeId(id);
+            if (existingGrade == null)
+            {
+                throw new KeyNotFoundException("Grade not found");
+            }
+            foreach (var detail in existingDetails)
+            {
+                await _unitOfWork.GradeDetailRepository.RemoveAsync(detail);
+            }
+            await _unitOfWork.GradeRepository.RemoveAsync(existingGrade);
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
+
 }

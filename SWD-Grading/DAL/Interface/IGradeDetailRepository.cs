@@ -9,5 +9,6 @@ namespace DAL.Interface
 {
     public interface IGradeDetailRepository : IGenericRepository<GradeDetail, long>
     {
+        Task<IEnumerable<GradeDetail>> GetByGradeId(long id);
     }
 }

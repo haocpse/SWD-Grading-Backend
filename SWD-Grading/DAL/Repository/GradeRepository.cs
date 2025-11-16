@@ -26,7 +26,9 @@ namespace DAL.Repository
 
         public async Task<Grade?> GetById(long id)
         {
-            return await _context.Grades.FirstOrDefaultAsync(g => g.Id == id);
+            return await _context.Grades.Include(g => g.Details)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(g => g.Id == id);
         }
     }
 }

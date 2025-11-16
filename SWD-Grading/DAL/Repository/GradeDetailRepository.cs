@@ -1,4 +1,5 @@
 ﻿using DAL.Interface;
+using Microsoft.EntityFrameworkCore;
 using Model.Entity;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,12 @@ namespace DAL.Repository
         public GradeDetailRepository(SWDGradingDbContext context) : base(context)
         {
             _context = context;
+        }
+
+        public async Task<IEnumerable<GradeDetail>> GetByGradeId(long id)
+        {
+            var gradeDetails = await _context.GradeDetails.Where(gd => gd.GradeId == id).ToListAsync();
+            return gradeDetails;
         }
     }
 }
