@@ -80,17 +80,17 @@ namespace BLL.Service
 				throw new InvalidOperationException($"Document {docFileId} has not been successfully parsed or has no text content");
 			}
 
-		// 6. Ensure Qdrant collection exists
-		await _vectorService.EnsureCollectionExistsAsync();
+			// 6. Ensure Qdrant collection exists
+			await _vectorService.EnsureCollectionExistsAsync();
 
 		// 7. Always re-index when manually calling plagiarism check API to ensure latest data
 		_logger.LogInformation($"[PlagiarismCheck] Re-indexing DocFile {docFileId} (manual check always re-indexes)");
-		await _vectorService.IndexDocumentAsync(
-			docFileId: docFileId,
-			examId: examId,
-			studentCode: studentCode,
-			text: docFile.ParsedText
-		);
+					await _vectorService.IndexDocumentAsync(
+						docFileId: docFileId,
+						examId: examId,
+						studentCode: studentCode,
+						text: docFile.ParsedText
+					);
 		
 		// Mark as embedded
 		docFile.IsEmbedded = true;
@@ -152,33 +152,39 @@ namespace BLL.Service
 
 			_logger.LogInformation($"[PlagiarismCheck] ✓ Plagiarism check completed successfully. Check ID: {similarityCheck.Id}");
 
-			// 11. Build response
-			var response = new PlagiarismCheckResponse
+		// 11. Build response with file paths
+		var response = new PlagiarismCheckResponse
+		{
+			CheckId = similarityCheck.Id,
+			ExamId = examId,
+			ExamCode = exam.ExamCode,
+			CheckedAt = similarityCheck.CheckedAt,
+			Threshold = threshold,
+			TotalPairsChecked = similarPairs.Count,
+			SuspiciousPairsCount = similarPairs.Count,
+			CheckedByUsername = user.Username,
+			SuspiciousPairs = similarityResults.Select(result => 
 			{
-				CheckId = similarityCheck.Id,
-				ExamId = examId,
-				ExamCode = exam.ExamCode,
-				CheckedAt = similarityCheck.CheckedAt,
-				Threshold = threshold,
-				TotalPairsChecked = similarPairs.Count,
-				SuspiciousPairsCount = similarPairs.Count,
-				CheckedByUsername = user.Username,
-				SuspiciousPairs = similarityResults.Select(result => new SimilarityPairResponse
+				var matchedDocFile = _unitOfWork.DocFileRepository.GetByIdAsync(result.DocFile2Id).Result;
+				
+				return new SimilarityPairResponse
 				{
 					ResultId = result.Id,
 					Student1Code = result.Student1Code ?? "Unknown",
 					Student2Code = result.Student2Code ?? "Unknown",
 					DocFile1Name = docFile.FileName,
-					DocFile2Name = similarPairs.FirstOrDefault(p => p.DocFile2Id == result.DocFile2Id) != null
-						? _unitOfWork.DocFileRepository.GetByIdAsync(result.DocFile2Id).Result?.FileName
-						: null,
+					DocFile2Name = matchedDocFile?.FileName,
 					DocFile1Id = result.DocFile1Id,
 					DocFile2Id = result.DocFile2Id,
-					SimilarityScore = result.SimilarityScore
-				}).ToList()
-			};
+					SimilarityScore = result.SimilarityScore,
+					// Return file paths from DocFile records
+					DocFile1Path = docFile.FilePath,
+					DocFile2Path = matchedDocFile?.FilePath
+				};
+			}).ToList()
+		};
 
-			return response;
+		return response;
 		}
 
 		public async Task GenerateEmbeddingForDocFileAsync(long docFileId)
@@ -192,19 +198,19 @@ namespace BLL.Service
 				throw new ArgumentException($"DocFile with ID {docFileId} not found");
 			}
 
-		// Only generate embedding if document is successfully parsed
-		if (docFile.ParseStatus != DocParseStatus.OK || string.IsNullOrWhiteSpace(docFile.ParsedText))
-		{
-			_logger.LogWarning($"[GenerateEmbedding] DocFile {docFileId} has not been parsed or has no text (Status: {docFile.ParseStatus})");
-			return;
-		}
+			// Only generate embedding if document is successfully parsed
+			if (docFile.ParseStatus != DocParseStatus.OK || string.IsNullOrWhiteSpace(docFile.ParsedText))
+			{
+				_logger.LogWarning($"[GenerateEmbedding] DocFile {docFileId} has not been parsed or has no text (Status: {docFile.ParseStatus})");
+				return;
+			}
 
 		// Check if already embedded (for automatic background job processing)
 		if (docFile.IsEmbedded)
-		{
+			{
 			_logger.LogInformation($"[GenerateEmbedding] DocFile {docFileId} is already embedded, skipping");
-			return;
-		}
+				return;
+			}
 
 			// Get exam and student info
 			var examStudent = await _unitOfWork.ExamStudentRepository.GetByIdAsync(docFile.ExamStudentId);
@@ -222,20 +228,20 @@ namespace BLL.Service
 			// Ensure collection exists
 			await _vectorService.EnsureCollectionExistsAsync();
 
-		// Index the document
-		await _vectorService.IndexDocumentAsync(
-			docFileId: docFileId,
-			examId: examStudent.ExamId,
-			studentCode: studentCode,
-			text: docFile.ParsedText
-		);
+			// Index the document
+			await _vectorService.IndexDocumentAsync(
+				docFileId: docFileId,
+				examId: examStudent.ExamId,
+				studentCode: studentCode,
+				text: docFile.ParsedText
+			);
 
 		// Mark as embedded
 		docFile.IsEmbedded = true;
 		await _unitOfWork.SaveChangesAsync();
 
-		_logger.LogInformation($"[GenerateEmbedding] ✓ Successfully generated and indexed embedding for DocFile {docFileId}");
-	}
+			_logger.LogInformation($"[GenerateEmbedding] ✓ Successfully generated and indexed embedding for DocFile {docFileId}");
+		}
 
 		public async Task<VerificationResponse> VerifyWithAIAsync(long similarityResultId)
 		{
