@@ -1,6 +1,7 @@
 ﻿using BLL.Interface;
-using BLL.Model.Request;
+using BLL.Model.Request.Auth;
 using BLL.Model.Response;
+using BLL.Model.Response.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 

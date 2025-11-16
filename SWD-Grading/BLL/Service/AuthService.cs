@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
 using BCrypt.Net;
 using BLL.Interface;
-using BLL.Model.Request;
-using BLL.Model.Response;
+using BLL.Model.Request.Auth;
+using BLL.Model.Response.Auth;
 using DAL.Interface;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;

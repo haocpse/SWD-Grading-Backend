@@ -1,5 +1,5 @@
-﻿using BLL.Model.Request;
-using BLL.Model.Response;
+﻿using BLL.Model.Request.Auth;
+using BLL.Model.Response.Auth;
 using System;
 using System.Collections.Generic;
 using System.Linq;
