@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using BLL.Model.Request.ExamQuestion;
 using BLL.Model.Response.ExamQuestion;
 using Model.Entity;
 using System;
@@ -14,7 +15,8 @@ namespace BLL.Mapper
 
 		public ExamQuestionProfile()
 		{
-			CreateMap<ExamQuestion, ExamQuestionResponse>();	
+			CreateMap<ExamQuestion, ExamQuestionResponse>();
+			CreateMap<UpdateExamQuestionRequest, ExamQuestion>();
 		}
 
 	}
