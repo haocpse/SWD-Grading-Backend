@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace SWD_Grading.Controllers
 {
 	[ApiController]
-	[Route("api/[controller]")]
+	[Route("api/docfile")]
 	public class PlagiarismController : ControllerBase
 	{
 		private readonly IPlagiarismService _plagiarismService;
@@ -26,7 +26,7 @@ namespace SWD_Grading.Controllers
 		/// <param name="docFileId">The suspicious document file ID to check</param>
 	/// <param name="request">Plagiarism check parameters including threshold</param>
 		/// <returns>Plagiarism check results with similar documents found</returns>
-		[HttpPost("check-document/{docFileId}")]
+		[HttpPost("{docFileId}/similarity-check")]
 		public async Task<ActionResult<BaseResponse<PlagiarismCheckResponse>>> CheckSuspiciousDocument(
 			long docFileId,
 		[FromBody] CheckPlagiarismRequest request)
@@ -34,7 +34,7 @@ namespace SWD_Grading.Controllers
 		try
 		{
 			// Use default userId = 1 (system check) if not authenticated
-			int userId = 2;
+			int userId = 310;
 			var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 			if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int authenticatedUserId))
 			{
@@ -81,7 +81,7 @@ namespace SWD_Grading.Controllers
 	/// </summary>
 	/// <param name="docFileId">The document file ID</param>
 	/// <returns>Success message</returns>
-	[HttpPost("generate-embedding/{docFileId}")]
+	[HttpPost("{docFileId}/re-embedding")]
 	public async Task<ActionResult<BaseResponse<object>>> GenerateEmbedding(long docFileId)
 	{
 		try
@@ -117,7 +117,7 @@ namespace SWD_Grading.Controllers
 	/// </summary>
 	/// <param name="similarityResultId">The similarity result ID to verify</param>
 	/// <returns>Verification result with AI analysis</returns>
-	[HttpPost("verify-with-ai/{similarityResultId}")]
+	[HttpPost("{similarityResultId}/verify-with-ai")]
 	public async Task<ActionResult<BaseResponse<VerificationResponse>>> VerifyWithAI(long similarityResultId)
 	{
 		try
@@ -163,7 +163,7 @@ namespace SWD_Grading.Controllers
 	/// <param name="similarityResultId">The similarity result ID to verify</param>
 	/// <param name="request">Verification details (is_similar, notes)</param>
 	/// <returns>Verification result</returns>
-	[HttpPost("teacher-verify/{similarityResultId}")]
+	[HttpPost("{similarityResultId}/teacher-reverify")]
 	public async Task<ActionResult<BaseResponse<VerificationResponse>>> TeacherVerify(
 		long similarityResultId,
 		[FromBody] TeacherVerifyRequest request)

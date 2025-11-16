@@ -11,6 +11,6 @@ namespace DAL.Interface
 	{
 
 		Task<IEnumerable<ExamQuestion>> GetQuestionByExamId(long id);
-
+		Task<bool> ExistQuestionByExamIdAndQuestionName(long id, string questionName);
 	}
 }

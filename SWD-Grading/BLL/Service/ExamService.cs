@@ -20,6 +20,8 @@ using BLL.Model.Request.Student;
 using Model.Enums;
 using BLL.Model.Response.ExamQuestion;
 using BLL.Model.Response.Rubric;
+using Amazon.Runtime.Telemetry.Tracing;
+using Grpc.Core;
 
 namespace BLL.Service
 {
@@ -38,13 +40,13 @@ namespace BLL.Service
 			Exam exam = _mapper.Map<Exam>(request);
 			await _unitOfWork.ExamRepository.AddAsync(exam);
 			await _unitOfWork.SaveChangesAsync();
-			return _mapper.Map<ExamResponse>(exam); 
+			return _mapper.Map<ExamResponse>(exam);
 		}
 
 		public async Task<bool> DeleteAsync(long id)
 		{
 			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(id);
-			if (exam == null) 
+			if (exam == null)
 				throw new AppException("Exam not found", 404);
 			await _unitOfWork.ExamRepository.RemoveAsync(exam);
 			await _unitOfWork.SaveChangesAsync();
@@ -77,8 +79,8 @@ namespace BLL.Service
 		public async Task<ExamResponse?> GetByIdAsync(long id)
 		{
 			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(id);
-			return exam == null ? 
-				throw new AppException("Exam not found", 404) : 
+			return exam == null ?
+				throw new AppException("Exam not found", 404) :
 				_mapper.Map<ExamResponse>(exam);
 		}
 
@@ -122,32 +124,36 @@ namespace BLL.Service
 
 				decimal rubricMaxScore = 0;
 				decimal.TryParse(scoreStr, out rubricMaxScore);
-
+				bool isDuplicatedQuestion = false;
 				// Nếu gặp "Part 1", "Part 2", "Part 3"
 				if (!string.IsNullOrWhiteSpace(partName))
 				{
-					// Nếu đang ở part trước → cập nhật tổng điểm
-					if (currentQuestion != null)
+					isDuplicatedQuestion = await _unitOfWork.ExamQuestionRepository.ExistQuestionByExamIdAndQuestionName(examId, partName);
+					if (!isDuplicatedQuestion)
 					{
-						currentQuestion.MaxScore = currentPartTotal;
+						// Nếu đang ở part trước → cập nhật tổng điểm
+						if (currentQuestion != null)
+						{
+							currentQuestion.MaxScore = currentPartTotal;
+						}
+
+						// Reset
+						currentPartTotal = 0;
+
+						currentQuestion = new ExamQuestion
+						{
+							ExamId = examId,
+							QuestionNumber = questionNumber++,
+							QuestionText = partName,
+							MaxScore = 0 // sẽ cập nhật sau
+						};
+
+						questions.Add(currentQuestion);
 					}
-
-					// Reset
-					currentPartTotal = 0;
-
-					currentQuestion = new ExamQuestion
-					{
-						ExamId = examId,
-						QuestionNumber = questionNumber++,
-						QuestionText = partName,
-						MaxScore = 0 // sẽ cập nhật sau
-					};
-
-					questions.Add(currentQuestion);
 				}
 
 				// Thêm Rubric thuộc part hiện tại
-				if (currentQuestion != null && !string.IsNullOrWhiteSpace(desc))
+				if (!isDuplicatedQuestion && currentQuestion != null && !string.IsNullOrWhiteSpace(desc))
 				{
 					rubrics.Add(new Rubric
 					{
@@ -199,26 +205,62 @@ namespace BLL.Service
 				//--------------------------------------------------------------
 				// Add ExamStudent
 				//--------------------------------------------------------------
-				examStudents.Add(new ExamStudent
+				(bool existed, ExamStudent? es) resultExamStudent = await GetOrCreateExamStudentAsync(examId, result.student, result.existed);
+				if (!resultExamStudent.existed)
 				{
-					ExamId = examId,
-					Student = result.student,
-					TeacherId = teacher.Id,
-					Status = ExamStudentStatus.NOT_FOUND, // default
-					Note = null
-				});
+					examStudents.Add(new ExamStudent
+					{
+						ExamId = examId,
+						Student = result.student,
+						TeacherId = teacher.Id,
+						Status = ExamStudentStatus.NOT_FOUND, // default
+						Note = null
+					});
+				}
+
 			}
 
 			//--------------------------------------------------------------------
 			// 3) SAVE ALL → chỉ SaveChanges 1 lần cho hiệu suất
 			//--------------------------------------------------------------------
-			if (students.Count > 0) 
+			bool saved = false;
+			if (students.Count > 0)
+			{
 				await _unitOfWork.StudentRepository.AddRangeAsync(students);
-			await _unitOfWork.ExamStudentRepository.AddRangeAsync(examStudents);
-			await _unitOfWork.ExamQuestionRepository.AddRangeAsync(questions);
-			await _unitOfWork.RubricRepository.AddRangeAsync(rubrics);
+				saved = true;
+			}
+				
+			if (examStudents.Count > 0)
+			{
+				await _unitOfWork.ExamStudentRepository.AddRangeAsync(examStudents);
+				saved = true;
+			}
 
-			await _unitOfWork.SaveChangesAsync();
+			foreach (var q in questions)
+			{
+				ValidateExamQuestion(q);
+
+				if (!rubrics.Any(r => r.ExamQuestion == q))
+					throw new AppException($"Question '{q.QuestionText}' must have at least 1 rubric.", 400);
+			}
+			if (questions.Count > 0)
+			{
+				await _unitOfWork.ExamQuestionRepository.AddRangeAsync(questions);
+				saved = true;
+			}
+				
+			foreach (var r in rubrics)
+			{
+				ValidateRubric(r);
+			}
+			if (rubrics.Count > 0)
+			{
+				await _unitOfWork.RubricRepository.AddRangeAsync(rubrics);
+				saved = true;
+			}	
+
+			if (saved)
+				await _unitOfWork.SaveChangesAsync();
 		}
 
 		private async Task<User> GetOrCreateTeacherAsync(string teacherCode)
@@ -264,6 +306,18 @@ namespace BLL.Service
 			return (false, student);
 		}
 
+		private async Task<(bool existed, ExamStudent? es)> GetOrCreateExamStudentAsync(long examId, Student student, bool isExsitedStudent)
+		{
+			// Try get existing
+			if (isExsitedStudent)
+			{
+				var examStudent = await _unitOfWork.ExamStudentRepository.GetByExamAndStudentAsync(examId, student.Id);
+				if (examStudent != null)
+					return (true, examStudent);
+			}
+			return (false, null);
+		}
+
 		private string GetCellValue(SpreadsheetDocument doc, Cell cell)
 		{
 			if (cell.CellValue == null)
@@ -306,6 +360,39 @@ namespace BLL.Service
 			}
 			response.Questions = questionResponses;
 			return response;
+		}
+
+		private void ValidateExamQuestion(ExamQuestion q)
+		{
+			if (q.ExamId <= 0)
+				throw new AppException("Invalid ExamId for question.", 400);
+
+			if (q.QuestionNumber <= 0)
+				throw new AppException($"Invalid QuestionNumber for '{q.QuestionText}'.", 400);
+
+			if (q.MaxScore < 0)
+				throw new AppException($"Question '{q.QuestionText}' has invalid MaxScore.", 400);
+
+			if (q.RelatedDocSection != null && q.RelatedDocSection.Length > 255)
+				throw new AppException($"RelatedDocSection exceeds max length 255.", 400);
+		}
+
+		private void ValidateRubric(Rubric r)
+		{
+			if (r.ExamQuestionId <= 0)
+				throw new AppException("Invalid ExamQuestionId for rubric.", 400);
+
+			if (string.IsNullOrWhiteSpace(r.Criterion))
+				throw new AppException("Rubric Criterion is required.", 400);
+
+			if (r.Criterion.Length > 255)
+				throw new AppException($"Rubric '{r.Criterion}' exceeds max length 255.", 400);
+
+			if (r.MaxScore <= 0)
+				throw new AppException($"Rubric '{r.Criterion}' has invalid MaxScore.", 400);
+
+			if (r.OrderIndex <= 0)
+				throw new AppException($"Rubric '{r.Criterion}' has invalid OrderIndex.", 400);
 		}
 	}
 }
