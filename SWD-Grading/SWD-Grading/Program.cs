@@ -57,11 +57,13 @@ namespace SWD_Grading
 			// Services
 			builder.Services.AddScoped<IAuthService, AuthService>();
 			builder.Services.AddScoped<IExamService, ExamService>();
-			builder.Services.AddSingleton<ITesseractOcrService>(sp =>
-			new TesseractOcrService(
-				Path.Combine(AppContext.BaseDirectory, "tessdata")
-				)
-			);
+			builder.Services.AddScoped<ITesseractOcrService>(sp =>
+			{
+				var tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+				var uow = sp.GetRequiredService<IUnitOfWork>();
+
+				return new TesseractOcrService(tessdataPath, uow);
+			});
 			builder.Services.AddScoped<IS3Service, S3Service>();
 			builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
 			builder.Services.AddScoped<IExamUploadService, ExamUploadService>();

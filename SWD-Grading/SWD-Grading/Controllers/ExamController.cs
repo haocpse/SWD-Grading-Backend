@@ -2,6 +2,7 @@
 using BLL.Model.Request.Exam;
 using BLL.Model.Response;
 using BLL.Model.Response.Exam;
+using BLL.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,9 +14,11 @@ namespace SWD_Grading.Controllers
 	{
 
 		private readonly IExamService _examService;
-		public ExamController(IExamService examService)
+		private readonly ITesseractOcrService _ocrService;
+		public ExamController(IExamService examService, ITesseractOcrService ocrService)
 		{
 			_examService = examService;
+			_ocrService = ocrService;
 		}
 
 		[HttpPost]
@@ -88,5 +91,37 @@ namespace SWD_Grading.Controllers
 
 			return NoContent();
 		}
+
+		[HttpPut("{id}/description")]
+		[Consumes("multipart/form-data")]
+		public async Task<IActionResult> ExtractText([FromRoute] long id, IFormFile file)
+		{
+			if (file == null || file.Length == 0)
+				return BadRequest("No file uploaded.");
+
+			var tempFilePath = Path.GetTempFileName();
+			using (var stream = new FileStream(tempFilePath, FileMode.Create))
+			{
+				await file.CopyToAsync(stream);
+			}
+
+			string rawText;
+			try
+			{
+				rawText = await _ocrService.ExtractText(id, tempFilePath, "eng");
+			}
+			finally
+			{
+				System.IO.File.Delete(tempFilePath);
+			}
+			Console.WriteLine(rawText);
+			return Ok(new
+			{
+				code = 200,
+				message = "OCR completed successfully",
+				problemStatement = rawText
+			});
+		}
+
 	}
 }

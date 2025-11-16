@@ -9,7 +9,7 @@ namespace BLL.Interface
 	public interface ITesseractOcrService
 	{
 
-		string ExtractText(string imagePath, string language = "eng");
+		Task<string> ExtractText(long examId, string imagePath, string language = "eng");
 
 	}
 }
