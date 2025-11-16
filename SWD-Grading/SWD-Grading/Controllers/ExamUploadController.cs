@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace SWD_Grading.Controllers
 {
 	[ApiController]
-	[Route("api/[controller]")]
+	[Route("api")]
 	public class ExamUploadController : ControllerBase
 	{
 		private readonly IExamUploadService _examUploadService;
@@ -24,22 +24,22 @@ namespace SWD_Grading.Controllers
 			_logger = logger;
 		}
 
-		/// <summary>
-		/// Upload ZIP file containing Student_Solutions folder
-		/// </summary>
-		/// <param name="examId">Exam ID</param>
-		/// <param name="file">ZIP file containing Student_Solutions folder with all student submissions</param>
-		/// <returns>Upload response with ExamZip ID</returns>
-		[HttpPost("upload-solutions/{examId}")]
-		[Consumes("multipart/form-data")]
-		[RequestSizeLimit(524288000)] // 500 MB
-		[RequestFormLimits(MultipartBodyLengthLimit = 524288000)] // 500 MB
-		[ProducesResponseType(typeof(UploadStudentSolutionsResponse), StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status400BadRequest)]
-		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
-		public async Task<IActionResult> UploadStudentSolutions(
-			[FromRoute] long examId,
-			IFormFile file)
+	/// <summary>
+	/// Upload ZIP file containing Student_Solutions folder
+	/// </summary>
+	/// <param name="examId">Exam ID</param>
+	/// <param name="file">ZIP file containing Student_Solutions folder with all student submissions</param>
+	/// <returns>Upload response with ExamZip ID</returns>
+	[HttpPost("exams/{examId}/upload-zip")]
+	[Consumes("multipart/form-data")]
+	[RequestSizeLimit(524288000)] // 500 MB
+	[RequestFormLimits(MultipartBodyLengthLimit = 524288000)] // 500 MB
+	[ProducesResponseType(typeof(UploadStudentSolutionsResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+	public async Task<IActionResult> UploadStudentSolutions(
+		[FromRoute] long examId,
+		IFormFile file)
 		{
 			try
 			{
@@ -88,22 +88,22 @@ namespace SWD_Grading.Controllers
 			}
 		}
 
-		/// <summary>
-		/// Get processing status of uploaded exam ZIP
-		/// </summary>
-		/// <param name="examZipId">ExamZip ID</param>
-		/// <returns>Processing status response</returns>
-		[HttpGet("status/{examZipId}")]
-		[ProducesResponseType(typeof(ProcessingStatusResponse), StatusCodes.Status200OK)]
-		[ProducesResponseType(StatusCodes.Status404NotFound)]
-		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
-		public async Task<IActionResult> GetProcessingStatus([FromRoute] long examZipId)
+	/// <summary>
+	/// Get processing status of uploaded exam ZIP
+	/// </summary>
+	/// <param name="id">ExamZip ID</param>
+	/// <returns>Processing status response</returns>
+	[HttpGet("exam-zips/{id}/check-status")]
+	[ProducesResponseType(typeof(ProcessingStatusResponse), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+	public async Task<IActionResult> GetProcessingStatus([FromRoute] long id)
+	{
+		try
 		{
-			try
-			{
-				_logger.LogInformation($"Fetching processing status for ExamZip ID: {examZipId}");
+			_logger.LogInformation($"Fetching processing status for ExamZip ID: {id}");
 
-				var status = await _examUploadService.GetProcessingStatusAsync(examZipId);
+			var status = await _examUploadService.GetProcessingStatusAsync(id);
 
 				return Ok(status);
 			}
