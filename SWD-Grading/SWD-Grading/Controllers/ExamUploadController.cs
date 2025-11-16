@@ -25,23 +25,25 @@ namespace SWD_Grading.Controllers
 		}
 
 		/// <summary>
-		/// Upload student solutions ZIP file
+		/// Upload ZIP file containing Student_Solutions folder
 		/// </summary>
 		/// <param name="examId">Exam ID</param>
-		/// <param name="file">ZIP file containing student solutions</param>
+		/// <param name="file">ZIP file containing Student_Solutions folder with all student submissions</param>
 		/// <returns>Upload response with ExamZip ID</returns>
 		[HttpPost("upload-solutions/{examId}")]
+		[Consumes("multipart/form-data")]
+		[RequestSizeLimit(524288000)] // 500 MB
+		[RequestFormLimits(MultipartBodyLengthLimit = 524288000)] // 500 MB
 		[ProducesResponseType(typeof(UploadStudentSolutionsResponse), StatusCodes.Status200OK)]
 		[ProducesResponseType(StatusCodes.Status400BadRequest)]
 		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 		public async Task<IActionResult> UploadStudentSolutions(
 			[FromRoute] long examId,
-			[FromForm] IFormFile file,
-			[FromForm] string examCode)
+			IFormFile file)
 		{
 			try
 			{
-				if (file == null)
+				if (file == null || file.Length == 0)
 				{
 					return BadRequest(new UploadStudentSolutionsResponse
 					{
@@ -51,19 +53,9 @@ namespace SWD_Grading.Controllers
 					});
 				}
 
-				if (string.IsNullOrEmpty(examCode))
-				{
-					return BadRequest(new UploadStudentSolutionsResponse
-					{
-						ExamZipId = 0,
-						Status = "Error",
-						Message = "ExamCode is required"
-					});
-				}
+				_logger.LogInformation($"Initiating upload for Exam ID: {examId}, File: {file.FileName} ({file.Length} bytes)");
 
-				_logger.LogInformation($"Initiating upload for Exam ID: {examId}, ExamCode: {examCode}");
-
-				var examZipId = await _examUploadService.InitiateUploadAsync(file, examId, examCode);
+				var examZipId = await _examUploadService.InitiateUploadAsync(file, examId);
 
 				_logger.LogInformation($"Upload initiated successfully. ExamZip ID: {examZipId}");
 
@@ -71,7 +63,7 @@ namespace SWD_Grading.Controllers
 				{
 					ExamZipId = examZipId,
 					Status = "Processing",
-					Message = "File uploaded successfully and processing has started. Check status using the provided ExamZipId."
+					Message = $"File '{file.FileName}' uploaded successfully and processing has started. Check status using the provided ExamZipId."
 				});
 			}
 			catch (ArgumentException ex)
