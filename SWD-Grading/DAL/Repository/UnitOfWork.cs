@@ -115,6 +115,19 @@ namespace DAL.Repository
 			}
 		}
 
+		private ISimilarityCheckRepository? _similarityCheckRepository;
+		public ISimilarityCheckRepository SimilarityCheckRepository
+		{
+			get
+			{
+				if (_similarityCheckRepository == null)
+				{
+					_similarityCheckRepository = new SimilarityCheckRepository(_context);
+				}
+				return _similarityCheckRepository;
+			}
+		}
+
 		private IExamQuestionRepository _examQuestionRepository;
 		public IExamQuestionRepository ExamQuestionRepository
 		{

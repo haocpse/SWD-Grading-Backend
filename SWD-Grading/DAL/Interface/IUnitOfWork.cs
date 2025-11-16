@@ -19,6 +19,8 @@ namespace DAL.Interface
 		IExamZipRepository ExamZipRepository { get; }
 		IExamStudentRepository ExamStudentRepository { get; }
 		IDocFileRepository DocFileRepository { get; }
+		ISimilarityCheckRepository SimilarityCheckRepository { get; }
+		
 		IExamQuestionRepository ExamQuestionRepository { get; }
 		IRubricRepository RubricRepository { get; }
 

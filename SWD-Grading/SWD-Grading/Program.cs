@@ -159,6 +159,8 @@ namespace SWD_Grading
 		builder.Services.AddScoped<IS3Service, S3Service>();
 		builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
 		builder.Services.AddScoped<IExamUploadService, ExamUploadService>();
+		builder.Services.AddScoped<IVectorService, VectorService>();
+		builder.Services.AddScoped<IPlagiarismService, PlagiarismService>();
 		builder.Services.AddHostedService<BackgroundJobService>();
 
 			// Repositories
@@ -168,6 +170,7 @@ namespace SWD_Grading
 			builder.Services.AddScoped<IExamZipRepository, ExamZipRepository>();
 			builder.Services.AddScoped<IExamStudentRepository, ExamStudentRepository>();
 			builder.Services.AddScoped<IDocFileRepository, DocFileRepository>();
+			builder.Services.AddScoped<ISimilarityCheckRepository, SimilarityCheckRepository>();
             builder.Services.AddScoped<IRubricRepository, RubricRepository>();
             builder.Services.AddScoped<IExamQuestionRepository, ExamQuestionRepository>();
 

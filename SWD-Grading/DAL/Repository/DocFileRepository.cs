@@ -36,6 +36,18 @@ namespace DAL.Repository
 			.Where(df => examStudentIds.Contains(df.ExamStudentId))
 			.ToListAsync();
 	}
+
+	public async Task<List<DocFile>> GetRecentlyParsedDocFilesAsync(int limit = 10)
+	{
+		return await _context.Set<DocFile>()
+			.Include(df => df.ExamStudent)
+			.ThenInclude(es => es.Student)
+			.Where(df => df.ParseStatus == Model.Enums.DocParseStatus.OK 
+				&& !string.IsNullOrWhiteSpace(df.ParsedText))
+			.OrderByDescending(df => df.Id)
+			.Take(limit)
+			.ToListAsync();
+	}
 }
 }
 
