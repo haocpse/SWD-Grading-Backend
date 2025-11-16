@@ -1,4 +1,3 @@
-using Model.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,15 +6,17 @@ using System.Threading.Tasks;
 
 namespace Model.Response
 {
-	public class ProcessingStatusResponse
+	public class ExamZipResponse
 	{
 		public long ExamZipId { get; set; }
+		public long ExamId { get; set; }
+		public string? ExamCode { get; set; }
+		public string? ZipName { get; set; }
+		public DateTime UploadedAt { get; set; }
 		public string ParseStatus { get; set; } = null!;
+		public string? ParseSummary { get; set; }
 		public int ProcessedCount { get; set; }
 		public int TotalCount { get; set; }
-		public List<string> Errors { get; set; } = new();
-		public List<string> FailedStudents { get; set; } = new();
-		public string? ParseSummary { get; set; }
 	}
 }
 

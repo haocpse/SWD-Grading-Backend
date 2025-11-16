@@ -1,4 +1,5 @@
 using BLL.Interface;
+using BLL.Model.Response;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Model.Request;
@@ -126,6 +127,50 @@ namespace SWD_Grading.Controllers
 				});
 			}
 		}
+
+	/// <summary>
+	/// Get all exam zips with paging and filters
+	/// </summary>
+	/// <param name="filter">Filter parameters (page, size, examId, status)</param>
+	/// <returns>Paged list of exam zips</returns>
+	[HttpGet("exam-zips")]
+	[ProducesResponseType(typeof(BaseResponse<PagingResponse<ExamZipResponse>>), StatusCodes.Status200OK)]
+	[ProducesResponseType(StatusCodes.Status400BadRequest)]
+	[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+	public async Task<IActionResult> GetAllExamZips([FromQuery] ExamZipFilter filter)
+	{
+		try
+		{
+			var result = await _examUploadService.GetAllExamZipsAsync(filter);
+
+			BaseResponse<PagingResponse<ExamZipResponse>> response = new()
+			{
+				Code = 200,
+				Message = "Get exam zips successfully",
+				Data = result
+			};
+
+			return Ok(response);
+		}
+		catch (ArgumentException ex)
+		{
+			_logger.LogWarning($"Validation error: {ex.Message}");
+			return BadRequest(new
+			{
+				Code = 400,
+				Message = ex.Message
+			});
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error occurred while fetching exam zips");
+			return StatusCode(500, new
+			{
+				Code = 500,
+				Message = $"Internal server error: {ex.Message}"
+			});
+		}
+	}
 	}
 }
 
