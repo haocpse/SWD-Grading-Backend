@@ -37,8 +37,11 @@ namespace SWD_Grading
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"];
 
-			// Database Context
-			builder.Services.AddDbContext<SWDGradingDbContext>(options =>
+            // Database Context
+            builder.Services.AddDbContext<SWDGradingDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // Authentication Configuration
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
