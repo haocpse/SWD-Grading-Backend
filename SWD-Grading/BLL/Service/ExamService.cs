@@ -187,13 +187,9 @@ namespace BLL.Service
 				//--------------------------------------------------------------
 				// Create Student
 				//--------------------------------------------------------------
-				Student student = new Student
-				{
-					StudentCode = solution,
-					FullName = solution,
-					Email = $"{solution}@fpt.edu.vn"
-				};
-				students.Add(student);
+				(bool existed, Student student) result = await GetOrCreateStudentAsync(solution);
+				if (!result.existed)
+					students.Add(result.student);
 
 				//--------------------------------------------------------------
 				// Get or create Teacher
@@ -206,7 +202,7 @@ namespace BLL.Service
 				examStudents.Add(new ExamStudent
 				{
 					ExamId = examId,
-					Student = student,
+					Student = result.student,
 					TeacherId = teacher.Id,
 					Status = ExamStudentStatus.NOT_FOUND, // default
 					Note = null
@@ -216,7 +212,8 @@ namespace BLL.Service
 			//--------------------------------------------------------------------
 			// 3) SAVE ALL → chỉ SaveChanges 1 lần cho hiệu suất
 			//--------------------------------------------------------------------
-			await _unitOfWork.StudentRepository.AddRangeAsync(students);
+			if (students.Count > 0) 
+				await _unitOfWork.StudentRepository.AddRangeAsync(students);
 			await _unitOfWork.ExamStudentRepository.AddRangeAsync(examStudents);
 			await _unitOfWork.ExamQuestionRepository.AddRangeAsync(questions);
 			await _unitOfWork.RubricRepository.AddRangeAsync(rubrics);
@@ -247,6 +244,24 @@ namespace BLL.Service
 			await _unitOfWork.SaveChangesAsync();
 
 			return teacher;
+		}
+
+		private async Task<(bool existed, Student s)> GetOrCreateStudentAsync(string solution)
+		{
+			// Try get existing
+			var student = await _unitOfWork.StudentRepository.GetByStudentCodeAsync(solution);
+			if (student != null)
+				return (true, student);
+
+			// Create new
+			student = new Student
+			{
+				StudentCode = solution,
+				FullName = solution,
+				Email = $"{solution}@fpt.edu.vn"
+			};
+
+			return (false, student);
 		}
 
 		private string GetCellValue(SpreadsheetDocument doc, Cell cell)
