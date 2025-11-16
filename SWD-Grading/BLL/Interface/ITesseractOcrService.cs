@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +10,7 @@ namespace BLL.Interface
 	public interface ITesseractOcrService
 	{
 
-		Task<string> ExtractText(long examId, string imagePath, string language = "eng");
+		Task<string> ExtractText(long examId, string imagePath, IFormFile file, string language = "eng");
 
 	}
 }

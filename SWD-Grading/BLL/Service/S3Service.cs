@@ -1,4 +1,4 @@
-using Amazon.S3;
+﻿using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using BLL.Interface;
@@ -52,6 +52,46 @@ namespace BLL.Service
 			catch (Exception ex)
 			{
 				throw new Exception($"Unexpected error uploading file: {ex.Message}", ex);
+			}
+		}
+
+		public async Task<string> UploadImageAsync(Stream imageStream, string fileName, string path)
+		{
+			Console.WriteLine("============Extension: " + Path.GetExtension(fileName).ToLower());
+			try
+			{
+				// Validate extension
+				var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+				var ext = Path.GetExtension(fileName).ToLower();
+				
+				if (!allowedExtensions.Contains(ext))
+				{
+					throw new Exception("File không phải là hình ảnh hợp lệ.");
+				}
+
+				var s3Key = $"{path.TrimEnd('/')}/images/{fileName}";
+
+				var uploadRequest = new TransferUtilityUploadRequest
+				{
+					InputStream = imageStream,
+					Key = s3Key,
+					BucketName = _awsConfig.BucketName,
+					
+					CannedACL = S3CannedACL.Private
+				};
+
+				var transferUtility = new TransferUtility(_s3Client);
+				await transferUtility.UploadAsync(uploadRequest);
+
+				return $"https://{_awsConfig.BucketName}.s3.{_awsConfig.Region}.amazonaws.com/{s3Key}";
+			}
+			catch (AmazonS3Exception ex)
+			{
+				throw new Exception($"Error uploading image to S3: {ex.Message}", ex);
+			}
+			catch (Exception ex)
+			{
+				throw new Exception($"Unexpected error uploading image: {ex.Message}", ex);
 			}
 		}
 

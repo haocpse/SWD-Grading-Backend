@@ -113,7 +113,7 @@ namespace SWD_Grading.Controllers
 			string rawText;
 			try
 			{
-				rawText = await _ocrService.ExtractText(id, tempFilePath, "eng");
+				rawText = await _ocrService.ExtractText(id, tempFilePath, file, "eng");
 			}
 			finally
 			{

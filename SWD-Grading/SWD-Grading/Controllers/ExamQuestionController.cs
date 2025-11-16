@@ -12,6 +12,7 @@ namespace SWD_Grading.Controllers
 	{
 
 		private readonly IExamQuestionService _examQuestionService;
+		private readonly IRubricService _rubricService;
 
 		public ExamQuestionController(IExamQuestionService examQuestionService)
 		{
@@ -40,6 +41,13 @@ namespace SWD_Grading.Controllers
 			var ok = await _examQuestionService.DeleteAsync(id);
 			if (!ok) return NotFound();
 			return Ok(new { message = "Deleted" });
+		}
+
+		[HttpGet("{id}/rubrics")]
+		public async Task<IActionResult> GetRubricsByQuestionId([FromRoute] long id)
+		{
+			var items = await _rubricService.GetRubricByQuestionId(id);
+			return Ok(items);
 		}
 	}
 }

@@ -30,6 +30,9 @@ namespace BLL.Interface
 		/// <param name="path">Full S3 path to the file</param>
 		/// <returns>File stream</returns>
 		Task<Stream> GetFileAsync(string path);
+
+
+		Task<string> UploadImageAsync(Stream fileStream, string fileName, string path);
 	}
 }
 

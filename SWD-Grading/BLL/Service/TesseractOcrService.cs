@@ -1,5 +1,6 @@
 ﻿using BLL.Interface;
 using DAL.Interface;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,23 +15,47 @@ namespace BLL.Service
 	{
 		private readonly string _tessdataPath;
 		private readonly IUnitOfWork _unitOfWork;
+		private readonly IS3Service _s3Service;
 
-		public TesseractOcrService(string tessdataPath, IUnitOfWork unitOfWork)
+		public TesseractOcrService(string tessdataPath, IUnitOfWork unitOfWork, IS3Service s3Service)
 		{
 			_tessdataPath = tessdataPath;
 			_unitOfWork = unitOfWork;
+			_s3Service = s3Service;
 		}
 
-		public async Task<string> ExtractText(long examId, string imagePath, string language = "eng")
+		public async Task<string> ExtractText(long examId, string imagePath, IFormFile file, string language = "eng")
 		{
+			// Đọc file ảnh vào memory
+			byte[] imageBytes;
+
+			using (var ms = new MemoryStream())
+			{
+				await file.CopyToAsync(ms);
+				imageBytes = ms.ToArray();
+			}
+
+			// OCR bằng memory
+			using var pix = Pix.LoadFromMemory(imageBytes);
 			using var engine = new TesseractEngine(_tessdataPath, language, EngineMode.Default);
-			using var img = Pix.LoadFromFile(imagePath);
-			using var page = engine.Process(img);
+			using var page = engine.Process(pix);
+
 			string text = ExtractProblemStatement(page.GetText());
+
 			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(examId);
 			exam.Description = text;
+			var s3Path = $"{exam.ExamCode}";
+			string imageS3Url;
+
+			using var uploadStream = new MemoryStream(imageBytes);
+			imageS3Url = await _s3Service.UploadImageAsync(
+				uploadStream,
+				file.FileName,
+				s3Path
+			);
+			exam.ExamPaper = imageS3Url;
 			await _unitOfWork.SaveChangesAsync();
-			return text;
+			return imageS3Url;
 		}
 
 		private string ExtractProblemStatement(string rawText)
