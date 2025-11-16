@@ -30,6 +30,11 @@ namespace SWD_Grading
 			//service
 			builder.Services.AddScoped<IAuthService, AuthService>();
 			builder.Services.AddScoped<IExamService, ExamService>();
+			builder.Services.AddSingleton<ITesseractOcrService>(sp =>
+			new TesseractOcrService(
+				Path.Combine(AppContext.BaseDirectory, "tessdata")
+				)
+			);
 
 			//repository
 			builder.Services.AddScoped<IUserRepository, UserRepository>();
