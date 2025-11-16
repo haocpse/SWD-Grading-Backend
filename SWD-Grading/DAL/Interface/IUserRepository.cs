@@ -9,5 +9,7 @@ namespace DAL.Interface
 {
 	public interface IUserRepository : IGenericRepository<User, int>
 	{
-	}
+        Task<User?> GetByUsername(string username);
+        Task<bool> IsUsernameExists(string username);
+    }
 }
