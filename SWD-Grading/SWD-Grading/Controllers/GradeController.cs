@@ -65,7 +65,7 @@ namespace SWD_Grading.Controllers
             {
                 Code = 201,
                 Success = true,
-                Message = "Grade created successfully",
+                Message = "Grade created successfully"
            };
             return Ok(response);
         }

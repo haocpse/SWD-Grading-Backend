@@ -60,11 +60,12 @@ namespace BLL.Service
             return gradeDetailResponse;
         }
 
-        public async Task Create(GradeRequest request)
+        public async Task<long> Create(GradeRequest request)
         {
             var gradeEntity = _mapper.Map<Grade>(request);
             await _unitOfWork.GradeRepository.AddAsync(gradeEntity);
             await _unitOfWork.SaveChangesAsync();
+            return gradeEntity.Id;
         }
 
         public async Task Update(GradeRequest request, long id)

@@ -163,6 +163,7 @@ namespace SWD_Grading
 		builder.Services.AddScoped<IPlagiarismService, PlagiarismService>();
 		builder.Services.AddHostedService<BackgroundJobService>();
         builder.Services.AddScoped<IGradeService,GradeService>();
+            builder.Services.AddScoped<IGradeDetailService,GradeDetailService>();
 
             // Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -183,6 +184,7 @@ namespace SWD_Grading
 			builder.Services.AddAutoMapper(typeof(ExamQuestionProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(RubricProfile).Assembly);
             builder.Services.AddAutoMapper(typeof(GradeProfile).Assembly);
+            builder.Services.AddAutoMapper(typeof(GradeDetailProfile).Assembly);
             var app = builder.Build();
 
 			// Configure the HTTP request pipeline.
