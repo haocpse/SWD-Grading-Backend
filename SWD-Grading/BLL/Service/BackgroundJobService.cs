@@ -84,15 +84,15 @@ namespace BLL.Service
 			{
 				var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 				var plagiarismService = scope.ServiceProvider.GetRequiredService<IPlagiarismService>();
-
+			
 				// Get all DocFiles with ParseStatus = OK that might need embeddings
 				// We'll process documents that were recently parsed
 				var recentDocFiles = await unitOfWork.DocFileRepository.GetRecentlyParsedDocFilesAsync(limit: 10);
-
+			
 				if (recentDocFiles.Any())
 				{
 					_logger.LogInformation($"Found {recentDocFiles.Count} document(s) to generate embeddings");
-
+			
 					foreach (var docFile in recentDocFiles)
 					{
 						try

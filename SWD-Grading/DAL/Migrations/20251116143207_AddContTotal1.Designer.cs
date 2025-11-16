@@ -4,6 +4,7 @@ using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DAL.Migrations
 {
     [DbContext(typeof(SWDGradingDbContext))]
-    partial class SWDGradingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251116143207_AddContTotal1")]
+    partial class AddContTotal1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -43,9 +46,6 @@ namespace DAL.Migrations
                     b.Property<string>("FilePath")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsEmbedded")
-                        .HasColumnType("bit");
 
                     b.Property<string>("ParseMessage")
                         .HasColumnType("TEXT");
@@ -85,9 +85,6 @@ namespace DAL.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("ExamPaper")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .HasMaxLength(255)
@@ -479,7 +476,7 @@ namespace DAL.Migrations
             modelBuilder.Entity("Model.Entity.ExamQuestion", b =>
                 {
                     b.HasOne("Model.Entity.Exam", "Exam")
-                        .WithMany("Questions")
+                        .WithMany()
                         .HasForeignKey("ExamId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -528,7 +525,7 @@ namespace DAL.Migrations
             modelBuilder.Entity("Model.Entity.Grade", b =>
                 {
                     b.HasOne("Model.Entity.ExamStudent", "ExamStudent")
-                        .WithMany("Grades")
+                        .WithMany()
                         .HasForeignKey("ExamStudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -539,7 +536,7 @@ namespace DAL.Migrations
             modelBuilder.Entity("Model.Entity.GradeDetail", b =>
                 {
                     b.HasOne("Model.Entity.Grade", "Grade")
-                        .WithMany("Details")
+                        .WithMany()
                         .HasForeignKey("GradeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -558,7 +555,7 @@ namespace DAL.Migrations
             modelBuilder.Entity("Model.Entity.Rubric", b =>
                 {
                     b.HasOne("Model.Entity.ExamQuestion", "ExamQuestion")
-                        .WithMany("Rubrics")
+                        .WithMany()
                         .HasForeignKey("ExamQuestionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -616,26 +613,6 @@ namespace DAL.Migrations
                     b.Navigation("SimilarityCheck");
 
                     b.Navigation("TeacherVerifiedByUser");
-                });
-
-            modelBuilder.Entity("Model.Entity.Exam", b =>
-                {
-                    b.Navigation("Questions");
-                });
-
-            modelBuilder.Entity("Model.Entity.ExamQuestion", b =>
-                {
-                    b.Navigation("Rubrics");
-                });
-
-            modelBuilder.Entity("Model.Entity.ExamStudent", b =>
-                {
-                    b.Navigation("Grades");
-                });
-
-            modelBuilder.Entity("Model.Entity.Grade", b =>
-                {
-                    b.Navigation("Details");
                 });
 
             modelBuilder.Entity("Model.Entity.SimilarityCheck", b =>

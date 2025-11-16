@@ -1,3 +1,4 @@
+using Model.Enums;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -42,6 +43,26 @@ namespace Model.Entity
 
 		[MaxLength(50)]
 		public string? Student2Code { get; set; }
+
+		// Verification status
+		[Required]
+		public VerificationStatus VerificationStatus { get; set; } = VerificationStatus.Pending;
+
+		// AI verification details
+		public string? AIVerificationResult { get; set; } // LONGTEXT - stores AI analysis
+
+		public DateTime? AIVerifiedAt { get; set; }
+
+		// Teacher confirmation details
+		public int? TeacherVerifiedByUserId { get; set; }
+
+		[ForeignKey(nameof(TeacherVerifiedByUserId))]
+		public User? TeacherVerifiedByUser { get; set; }
+
+		public DateTime? TeacherVerifiedAt { get; set; }
+
+		[MaxLength(500)]
+		public string? TeacherNotes { get; set; }
 	}
 }
 

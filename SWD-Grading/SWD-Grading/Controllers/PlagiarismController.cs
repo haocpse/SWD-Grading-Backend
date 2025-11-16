@@ -21,32 +21,32 @@ namespace SWD_Grading.Controllers
 		}
 
 	/// <summary>
-	/// Check plagiarism for all submissions in an exam
+		/// Check plagiarism for a suspicious document against all other documents in the same exam
 	/// </summary>
-	/// <param name="examId">The exam ID to check</param>
+		/// <param name="docFileId">The suspicious document file ID to check</param>
 	/// <param name="request">Plagiarism check parameters including threshold</param>
-	/// <returns>Plagiarism check results with suspicious pairs</returns>
-	[HttpPost("check/{examId}")]
-	public async Task<ActionResult<BaseResponse<PlagiarismCheckResponse>>> CheckPlagiarism(
-		long examId,
+		/// <returns>Plagiarism check results with similar documents found</returns>
+		[HttpPost("check-document/{docFileId}")]
+		public async Task<ActionResult<BaseResponse<PlagiarismCheckResponse>>> CheckSuspiciousDocument(
+			long docFileId,
 		[FromBody] CheckPlagiarismRequest request)
 	{
 		try
 		{
 			// Use default userId = 1 (system check) if not authenticated
-			int userId = 1;
+			int userId = 2;
 			var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 			if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int authenticatedUserId))
 			{
 				userId = authenticatedUserId;
 			}
 
-			var result = await _plagiarismService.CheckPlagiarismAsync(examId, request.Threshold, userId);
+				var result = await _plagiarismService.CheckSuspiciousDocumentAsync(docFileId, request.Threshold, userId);
 
 			return Ok(new BaseResponse<PlagiarismCheckResponse>
 			{
 				Success = true,
-				Message = $"Plagiarism check completed. Found {result.SuspiciousPairsCount} suspicious pair(s).",
+					Message = $"Plagiarism check completed for document {docFileId}. Found {result.SuspiciousPairsCount} similar document(s).",
 				Data = result
 			});
 		}
@@ -64,35 +64,6 @@ namespace SWD_Grading.Controllers
 			{
 				Success = false,
 				Message = ex.Message
-			});
-		}
-		catch (Exception ex)
-		{
-			return StatusCode(500, new BaseResponse<object>
-			{
-				Success = false,
-				Message = $"Internal server error: {ex.Message}"
-			});
-		}
-	}
-
-	/// <summary>
-	/// Get plagiarism check history for an exam
-	/// </summary>
-	/// <param name="examId">The exam ID</param>
-	/// <returns>List of previous plagiarism checks</returns>
-	[HttpGet("history/{examId}")]
-	public async Task<ActionResult<BaseResponse<object>>> GetCheckHistory(long examId)
-	{
-		try
-		{
-			var history = await _plagiarismService.GetCheckHistoryAsync(examId);
-
-			return Ok(new BaseResponse<object>
-			{
-				Success = true,
-				Message = $"Retrieved {history.Count} plagiarism check(s)",
-				Data = history
 			});
 		}
 		catch (Exception ex)
@@ -140,6 +111,102 @@ namespace SWD_Grading.Controllers
 			});
 		}
 	}
+
+	/// <summary>
+	/// Verify a similarity result using AI (GPT) to confirm if documents are truly similar
+	/// </summary>
+	/// <param name="similarityResultId">The similarity result ID to verify</param>
+	/// <returns>Verification result with AI analysis</returns>
+	[HttpPost("verify-with-ai/{similarityResultId}")]
+	public async Task<ActionResult<BaseResponse<VerificationResponse>>> VerifyWithAI(long similarityResultId)
+	{
+		try
+		{
+			var result = await _plagiarismService.VerifyWithAIAsync(similarityResultId);
+
+			return Ok(new BaseResponse<VerificationResponse>
+			{
+				Success = true,
+				Message = $"AI verification completed. Result: {(result.AIVerifiedSimilar == true ? "Similar" : "Not Similar")}",
+				Data = result
+			});
+		}
+		catch (ArgumentException ex)
+		{
+			return BadRequest(new BaseResponse<object>
+			{
+				Success = false,
+				Message = ex.Message
+			});
+		}
+		catch (InvalidOperationException ex)
+		{
+			return BadRequest(new BaseResponse<object>
+			{
+				Success = false,
+				Message = ex.Message
+			});
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new BaseResponse<object>
+			{
+				Success = false,
+				Message = $"Internal server error: {ex.Message}"
+			});
+		}
+	}
+
+	/// <summary>
+	/// Teacher manually verifies a similarity result
+	/// </summary>
+	/// <param name="similarityResultId">The similarity result ID to verify</param>
+	/// <param name="request">Verification details (is_similar, notes)</param>
+	/// <returns>Verification result</returns>
+	[HttpPost("teacher-verify/{similarityResultId}")]
+	public async Task<ActionResult<BaseResponse<VerificationResponse>>> TeacherVerify(
+		long similarityResultId,
+		[FromBody] TeacherVerifyRequest request)
+	{
+		try
+		{
+			// Use default userId = 1 (system) if not authenticated
+			int userId = 1;
+			var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+			if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int authenticatedUserId))
+			{
+				userId = authenticatedUserId;
+			}
+
+			var result = await _plagiarismService.TeacherVerifyAsync(
+				similarityResultId, 
+				request.IsSimilar, 
+				request.Notes, 
+				userId);
+
+			return Ok(new BaseResponse<VerificationResponse>
+			{
+				Success = true,
+				Message = $"Teacher verification completed. Result: {(request.IsSimilar ? "Similar" : "Not Similar")}",
+				Data = result
+			});
+		}
+		catch (ArgumentException ex)
+		{
+			return BadRequest(new BaseResponse<object>
+			{
+				Success = false,
+				Message = ex.Message
+			});
+		}
+		catch (Exception ex)
+		{
+			return StatusCode(500, new BaseResponse<object>
+			{
+				Success = false,
+				Message = $"Internal server error: {ex.Message}"
+			});
+		}
+	}
 	}
 }
-

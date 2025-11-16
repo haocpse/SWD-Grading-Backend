@@ -43,7 +43,8 @@ namespace DAL.Repository
 			.Include(df => df.ExamStudent)
 			.ThenInclude(es => es.Student)
 			.Where(df => df.ParseStatus == Model.Enums.DocParseStatus.OK 
-				&& !string.IsNullOrWhiteSpace(df.ParsedText))
+				&& !string.IsNullOrWhiteSpace(df.ParsedText)
+				&& !df.IsEmbedded) // Only get documents that haven't been embedded yet
 			.OrderByDescending(df => df.Id)
 			.Take(limit)
 			.ToListAsync();
