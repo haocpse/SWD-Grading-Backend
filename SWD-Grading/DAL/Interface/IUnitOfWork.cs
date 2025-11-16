@@ -14,7 +14,12 @@ namespace DAL.Interface
 			where TId : notnull;
 
 		IUserRepository UserRepository { get; }
+		IStudentRepository StudentRepository { get; }
 		IExamRepository ExamRepository { get; }
+		IExamZipRepository ExamZipRepository { get; }
+		IExamStudentRepository ExamStudentRepository { get; }
+		IDocFileRepository DocFileRepository { get; }
+		
 		Task<int> SaveChangesAsync();
 		Task<IDbContextTransaction> BeginTransactionAsync();
 	}

@@ -217,3 +217,4 @@ logs/
 *.sln
 
 **/appsettings.json
+SWD-Grading/SWD-Grading/appsettings.json

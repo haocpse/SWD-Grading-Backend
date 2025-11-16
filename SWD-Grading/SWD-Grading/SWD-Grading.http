@@ -1,6 +1,0 @@
-@SWD_Grading_HostAddress = http://localhost:5064
-
-GET {{SWD_Grading_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

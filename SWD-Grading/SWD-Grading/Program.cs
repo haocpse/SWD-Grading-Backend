@@ -1,4 +1,5 @@
 
+using Amazon.S3;
 using BLL.Interface;
 using BLL.Mapper;
 using BLL.Service;
@@ -17,17 +18,43 @@ namespace SWD_Grading
 
 			// Add services to the container.
 
+			builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+			{
+				options.MultipartBodyLengthLimit = 524288000; 
+			});
+
+			builder.WebHost.ConfigureKestrel(options =>
+			{
+				options.Limits.MaxRequestBodySize = 524288000; 
+			});
+
 			builder.Services.AddControllers();
 			// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 			builder.Services.AddEndpointsApiExplorer();
 			builder.Services.AddSwaggerGen();
 
+			// Database Context
 			builder.Services.AddDbContext<SWDGradingDbContext>(options =>
 				options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+			
+			// Unit of Work and Generic Repository
 			builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 			builder.Services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
 
-			//service
+		// AWS S3 Configuration
+		var awsOptions = builder.Configuration.GetAWSOptions();
+		var awsConfig = builder.Configuration.GetSection("AWS");
+		
+		awsOptions.Credentials = new Amazon.Runtime.BasicAWSCredentials(
+			awsConfig["AccessKey"],
+			awsConfig["SecretKey"]
+		);
+		awsOptions.Region = Amazon.RegionEndpoint.GetBySystemName(awsConfig["Region"]);
+		
+		builder.Services.AddDefaultAWSOptions(awsOptions);
+		builder.Services.AddAWSService<IAmazonS3>();
+
+			// Services
 			builder.Services.AddScoped<IAuthService, AuthService>();
 			builder.Services.AddScoped<IExamService, ExamService>();
 			builder.Services.AddSingleton<ITesseractOcrService>(sp =>
@@ -35,12 +62,20 @@ namespace SWD_Grading
 				Path.Combine(AppContext.BaseDirectory, "tessdata")
 				)
 			);
+			builder.Services.AddScoped<IS3Service, S3Service>();
+			builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
+			builder.Services.AddScoped<IExamUploadService, ExamUploadService>();
+			builder.Services.AddHostedService<BackgroundJobService>();
 
-			//repository
+			// Repositories
 			builder.Services.AddScoped<IUserRepository, UserRepository>();
+			builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 			builder.Services.AddScoped<IExamRepository, ExamRepository>();
+			builder.Services.AddScoped<IExamZipRepository, ExamZipRepository>();
+			builder.Services.AddScoped<IExamStudentRepository, ExamStudentRepository>();
+			builder.Services.AddScoped<IDocFileRepository, DocFileRepository>();
 
-			//mapper
+			// AutoMapper
 			builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(ExamProfile).Assembly);
 
