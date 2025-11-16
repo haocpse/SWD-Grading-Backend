@@ -18,6 +18,8 @@ namespace DAL
 		public DbSet<Rubric> Rubrics { get; set; }
 		public DbSet<Grade> Grades { get; set; }
 		public DbSet<GradeDetail> GradeDetails { get; set; }
+		public DbSet<SimilarityCheck> SimilarityChecks { get; set; }
+		public DbSet<SimilarityResult> SimilarityResults { get; set; }
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			base.OnModelCreating(modelBuilder);
@@ -91,6 +93,10 @@ namespace DAL
 				entity.HasOne(e => e.Student)
 					  .WithMany()
 					  .HasForeignKey(e => e.StudentId)
+					  .OnDelete(DeleteBehavior.Cascade);
+				entity.HasOne(e => e.Teacher)
+					  .WithMany()
+					  .HasForeignKey(e => e.TeacherId)
 					  .OnDelete(DeleteBehavior.Cascade);
 			});
 			modelBuilder.Entity<ExamZip>(entity =>
@@ -180,7 +186,7 @@ namespace DAL
 					  .HasMaxLength(255);
 
 				entity.HasOne(e => e.Exam)
-					  .WithMany()
+					  .WithMany(x => x.Questions)
 					  .HasForeignKey(e => e.ExamId)
 					  .OnDelete(DeleteBehavior.Cascade);
 			});
@@ -204,9 +210,10 @@ namespace DAL
 					  .IsRequired();
 
 				entity.HasOne(e => e.ExamQuestion)
-					  .WithMany()
+					  .WithMany(q => q.Rubrics)
 					  .HasForeignKey(e => e.ExamQuestionId)
 					  .OnDelete(DeleteBehavior.Cascade);
+
 			});
 			modelBuilder.Entity<Grade>(entity =>
 			{
@@ -227,7 +234,7 @@ namespace DAL
 					  .HasMaxLength(100);
 
 				entity.HasOne(e => e.ExamStudent)
-					  .WithMany()
+					  .WithMany(es => es.Grades)
 					  .HasForeignKey(e => e.ExamStudentId)
 					  .OnDelete(DeleteBehavior.Cascade);
 			});
@@ -247,13 +254,77 @@ namespace DAL
 					  .HasColumnType("TEXT");
 
 				entity.HasOne(e => e.Grade)
-					  .WithMany()
+					  .WithMany(g => g.Details)
 					  .HasForeignKey(e => e.GradeId)
 					  .OnDelete(DeleteBehavior.Cascade);
 
 				entity.HasOne(e => e.Rubric)
 					  .WithMany()
 					  .HasForeignKey(e => e.RubricId)
+					  .OnDelete(DeleteBehavior.Restrict);
+			});
+			modelBuilder.Entity<SimilarityCheck>(entity =>
+			{
+				entity.ToTable("similarity_check");
+
+				entity.HasKey(e => e.Id);
+
+				entity.Property(e => e.ExamId).IsRequired();
+
+				entity.Property(e => e.CheckedAt)
+					  .HasColumnType("DATETIME")
+					  .IsRequired();
+
+				entity.Property(e => e.Threshold)
+					  .HasColumnType("DECIMAL(5,4)")
+					  .IsRequired();
+
+				entity.Property(e => e.CheckedByUserId).IsRequired();
+
+				entity.HasOne(e => e.Exam)
+					  .WithMany()
+					  .HasForeignKey(e => e.ExamId)
+					  .OnDelete(DeleteBehavior.Cascade);
+
+				entity.HasOne(e => e.CheckedByUser)
+					  .WithMany()
+					  .HasForeignKey(e => e.CheckedByUserId)
+					  .OnDelete(DeleteBehavior.Restrict);
+			});
+			modelBuilder.Entity<SimilarityResult>(entity =>
+			{
+				entity.ToTable("similarity_result");
+
+				entity.HasKey(e => e.Id);
+
+				entity.Property(e => e.SimilarityCheckId).IsRequired();
+				entity.Property(e => e.DocFile1Id).IsRequired();
+				entity.Property(e => e.DocFile2Id).IsRequired();
+
+				entity.Property(e => e.SimilarityScore)
+					  .HasColumnType("DECIMAL(5,4)")
+					  .IsRequired();
+
+				entity.Property(e => e.Student1Code)
+					  .HasMaxLength(50);
+
+				entity.Property(e => e.Student2Code)
+					  .HasMaxLength(50);
+
+				entity.HasOne(e => e.SimilarityCheck)
+					  .WithMany(sc => sc.SimilarityResults)
+					  .HasForeignKey(e => e.SimilarityCheckId)
+					  .OnDelete(DeleteBehavior.Cascade);
+
+				// Self-referencing relationships to DocFile
+				entity.HasOne(e => e.DocFile1)
+					  .WithMany()
+					  .HasForeignKey(e => e.DocFile1Id)
+					  .OnDelete(DeleteBehavior.Restrict);
+
+				entity.HasOne(e => e.DocFile2)
+					  .WithMany()
+					  .HasForeignKey(e => e.DocFile2Id)
 					  .OnDelete(DeleteBehavior.Restrict);
 			});
 		}

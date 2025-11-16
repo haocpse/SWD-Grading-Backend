@@ -31,5 +31,6 @@ namespace Model.Entity
 
 		[MaxLength(100)]
 		public string? GradedBy { get; set; }
+		public List<GradeDetail> Details { get; set; } = new();
 	}
 }

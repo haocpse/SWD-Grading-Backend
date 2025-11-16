@@ -146,10 +146,22 @@ namespace SWD_Grading
 			// Services
 			builder.Services.AddScoped<IAuthService, AuthService>();
 			builder.Services.AddScoped<IExamService, ExamService>();
-			builder.Services.AddScoped<IS3Service, S3Service>();
-			builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
-			builder.Services.AddScoped<IExamUploadService, ExamUploadService>();
-			builder.Services.AddHostedService<BackgroundJobService>();
+			builder.Services.AddScoped<ITesseractOcrService>(sp =>
+			{
+				var tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+				var uow = sp.GetRequiredService<IUnitOfWork>();
+
+				return new TesseractOcrService(tessdataPath, uow);
+			});
+		builder.Services.AddScoped<IAuthService, AuthService>();
+		builder.Services.AddScoped<IExamService, ExamService>();
+		builder.Services.AddScoped<IExamStudentService, ExamStudentService>();
+		builder.Services.AddScoped<IS3Service, S3Service>();
+		builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
+		builder.Services.AddScoped<IExamUploadService, ExamUploadService>();
+		builder.Services.AddScoped<IVectorService, VectorService>();
+		builder.Services.AddScoped<IPlagiarismService, PlagiarismService>();
+		builder.Services.AddHostedService<BackgroundJobService>();
 
 			// Repositories
 			builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -158,11 +170,15 @@ namespace SWD_Grading
 			builder.Services.AddScoped<IExamZipRepository, ExamZipRepository>();
 			builder.Services.AddScoped<IExamStudentRepository, ExamStudentRepository>();
 			builder.Services.AddScoped<IDocFileRepository, DocFileRepository>();
+			builder.Services.AddScoped<ISimilarityCheckRepository, SimilarityCheckRepository>();
+            builder.Services.AddScoped<IRubricRepository, RubricRepository>();
+            builder.Services.AddScoped<IExamQuestionRepository, ExamQuestionRepository>();
 
 			// AutoMapper
 			builder.Services.AddAutoMapper(typeof(UserProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(ExamProfile).Assembly);
-
+			builder.Services.AddAutoMapper(typeof(ExamQuestionProfile).Assembly);
+			builder.Services.AddAutoMapper(typeof(RubricProfile).Assembly);
 			var app = builder.Build();
 
 			// Configure the HTTP request pipeline.

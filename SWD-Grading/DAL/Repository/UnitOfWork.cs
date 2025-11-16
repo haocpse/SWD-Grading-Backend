@@ -115,5 +115,43 @@ namespace DAL.Repository
 			}
 		}
 
+		private ISimilarityCheckRepository? _similarityCheckRepository;
+		public ISimilarityCheckRepository SimilarityCheckRepository
+		{
+			get
+			{
+				if (_similarityCheckRepository == null)
+				{
+					_similarityCheckRepository = new SimilarityCheckRepository(_context);
+				}
+				return _similarityCheckRepository;
+			}
+		}
+
+		private IExamQuestionRepository _examQuestionRepository;
+		public IExamQuestionRepository ExamQuestionRepository
+		{
+			get
+			{
+				if (_examQuestionRepository == null)
+				{
+					_examQuestionRepository = new ExamQuestionRepository(_context);
+				}
+				return _examQuestionRepository;
+			}
+		}
+
+		private IRubricRepository _rubricRepository;
+		public IRubricRepository RubricRepository
+		{
+			get
+			{
+				if (_rubricRepository == null)
+				{
+					_rubricRepository = new RubricRepository(_context);
+				}
+				return _rubricRepository;
+			}
+		}
 	}
 }

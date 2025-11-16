@@ -33,10 +33,11 @@ namespace BLL.Service
 				try
 				{
 					await ProcessPendingExamZipsAsync();
+					await ProcessPendingEmbeddingsAsync();
 				}
 				catch (Exception ex)
 				{
-					_logger.LogError(ex, "Error occurred while processing pending exam zips");
+					_logger.LogError(ex, "Error occurred while processing background jobs");
 				}
 
 				// Wait before next poll
@@ -71,6 +72,38 @@ namespace BLL.Service
 						catch (Exception ex)
 						{
 							_logger.LogError(ex, $"Error processing ExamZip ID: {examZip.Id}");
+						}
+					}
+				}
+			}
+		}
+
+		private async Task ProcessPendingEmbeddingsAsync()
+		{
+			using (var scope = _serviceProvider.CreateScope())
+			{
+				var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+				var plagiarismService = scope.ServiceProvider.GetRequiredService<IPlagiarismService>();
+
+				// Get all DocFiles with ParseStatus = OK that might need embeddings
+				// We'll process documents that were recently parsed
+				var recentDocFiles = await unitOfWork.DocFileRepository.GetRecentlyParsedDocFilesAsync(limit: 10);
+
+				if (recentDocFiles.Any())
+				{
+					_logger.LogInformation($"Found {recentDocFiles.Count} document(s) to generate embeddings");
+
+					foreach (var docFile in recentDocFiles)
+					{
+						try
+						{
+							_logger.LogInformation($"Generating embedding for DocFile ID: {docFile.Id}");
+							await plagiarismService.GenerateEmbeddingForDocFileAsync(docFile.Id);
+							_logger.LogInformation($"Successfully generated embedding for DocFile ID: {docFile.Id}");
+						}
+						catch (Exception ex)
+						{
+							_logger.LogError(ex, $"Error generating embedding for DocFile ID: {docFile.Id}");
 						}
 					}
 				}

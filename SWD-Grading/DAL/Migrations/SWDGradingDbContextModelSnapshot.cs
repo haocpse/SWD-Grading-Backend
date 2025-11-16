@@ -151,11 +151,16 @@ namespace DAL.Migrations
                     b.Property<long>("StudentId")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("TeacherId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExamId");
 
                     b.HasIndex("StudentId");
+
+                    b.HasIndex("TeacherId");
 
                     b.ToTable("exam_student", (string)null);
                 });
@@ -296,6 +301,74 @@ namespace DAL.Migrations
                     b.ToTable("rubric", (string)null);
                 });
 
+            modelBuilder.Entity("Model.Entity.SimilarityCheck", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CheckedAt")
+                        .HasColumnType("DATETIME");
+
+                    b.Property<int>("CheckedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ExamId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("Threshold")
+                        .HasColumnType("DECIMAL(5,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CheckedByUserId");
+
+                    b.HasIndex("ExamId");
+
+                    b.ToTable("similarity_check", (string)null);
+                });
+
+            modelBuilder.Entity("Model.Entity.SimilarityResult", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("DocFile1Id")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DocFile2Id")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("SimilarityCheckId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("SimilarityScore")
+                        .HasColumnType("DECIMAL(5,4)");
+
+                    b.Property<string>("Student1Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Student2Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocFile1Id");
+
+                    b.HasIndex("DocFile2Id");
+
+                    b.HasIndex("SimilarityCheckId");
+
+                    b.ToTable("similarity_result", (string)null);
+                });
+
             modelBuilder.Entity("Model.Entity.Student", b =>
                 {
                     b.Property<long>("Id")
@@ -343,6 +416,10 @@ namespace DAL.Migrations
 
                     b.Property<int>("Role")
                         .HasColumnType("int");
+
+                    b.Property<string>("TeacherCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -397,9 +474,17 @@ namespace DAL.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Model.Entity.User", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Exam");
 
                     b.Navigation("Student");
+
+                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("Model.Entity.ExamZip", b =>
@@ -452,6 +537,57 @@ namespace DAL.Migrations
                         .IsRequired();
 
                     b.Navigation("ExamQuestion");
+                });
+
+            modelBuilder.Entity("Model.Entity.SimilarityCheck", b =>
+                {
+                    b.HasOne("Model.Entity.User", "CheckedByUser")
+                        .WithMany()
+                        .HasForeignKey("CheckedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Model.Entity.Exam", "Exam")
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CheckedByUser");
+
+                    b.Navigation("Exam");
+                });
+
+            modelBuilder.Entity("Model.Entity.SimilarityResult", b =>
+                {
+                    b.HasOne("Model.Entity.DocFile", "DocFile1")
+                        .WithMany()
+                        .HasForeignKey("DocFile1Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Model.Entity.DocFile", "DocFile2")
+                        .WithMany()
+                        .HasForeignKey("DocFile2Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Model.Entity.SimilarityCheck", "SimilarityCheck")
+                        .WithMany("SimilarityResults")
+                        .HasForeignKey("SimilarityCheckId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DocFile1");
+
+                    b.Navigation("DocFile2");
+
+                    b.Navigation("SimilarityCheck");
+                });
+
+            modelBuilder.Entity("Model.Entity.SimilarityCheck", b =>
+                {
+                    b.Navigation("SimilarityResults");
                 });
 #pragma warning restore 612, 618
         }

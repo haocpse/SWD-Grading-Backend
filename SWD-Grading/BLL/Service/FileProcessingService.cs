@@ -10,7 +10,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace BLL.Service
@@ -167,53 +166,33 @@ namespace BLL.Service
 			}
 		}
 
-		private async Task ProcessStudentFolderAsync(string studentFolderPath, string folderName, ExamZip examZip, Exam exam)
+	private async Task ProcessStudentFolderAsync(string studentFolderPath, string folderName, ExamZip examZip, Exam exam)
+	{
+		// Use entire folder name as StudentCode (e.g., "Anhddhse170283")
+		var studentCode = folderName;
+
+		// Query Student by StudentCode
+		var student = await _unitOfWork.StudentRepository.GetByStudentCodeAsync(studentCode);
+		if (student == null)
 		{
-			// Parse student code from folder name
-			// Format: Anhddhse170283 -> extract "se170283" or use whole name
-			var studentCode = ExtractStudentCode(folderName);
+			throw new Exception($"Student with code '{studentCode}' not found in database");
+		}
 
-			// Check if student exists, if not create
-			var student = await _unitOfWork.StudentRepository.GetByStudentCodeAsync(studentCode);
-			if (student == null)
-			{
-				student = new Student
-				{
-					StudentCode = studentCode,
-					FullName = folderName, // Use folder name as full name initially
-					Email = null,
-					ClassName = null
-				};
-				await _unitOfWork.StudentRepository.AddAsync(student);
-				await _unitOfWork.SaveChangesAsync();
-			}
+		// Query ExamStudent by ExamId and StudentId
+		var examStudent = await _unitOfWork.ExamStudentRepository.GetByExamAndStudentAsync(exam.Id, student.Id);
+		if (examStudent == null)
+		{
+			throw new Exception($"ExamStudent record not found for Student '{studentCode}' in Exam '{exam.ExamCode}'");
+		}
 
-			// Create or get ExamStudent record
-			var examStudent = await _unitOfWork.ExamStudentRepository.GetByExamAndStudentAsync(exam.Id, student.Id);
-			if (examStudent == null)
-			{
-				examStudent = new ExamStudent
-				{
-					ExamId = exam.Id,
-					StudentId = student.Id,
-					Status = ExamStudentStatus.NOT_FOUND,
-					Note = null
-				};
-				await _unitOfWork.ExamStudentRepository.AddAsync(examStudent);
-				await _unitOfWork.SaveChangesAsync();
-			}
+		// Look for folder "0" inside student folder
+		var zeroFolderPath = Path.Combine(studentFolderPath, "0");
+		if (!Directory.Exists(zeroFolderPath))
+		{
+			throw new Exception("Folder '0' not found");
+		}
 
-			// Look for folder "0" inside student folder
-			var zeroFolderPath = Path.Combine(studentFolderPath, "0");
-			if (!Directory.Exists(zeroFolderPath))
-			{
-				examStudent.Status = ExamStudentStatus.NOT_FOUND;
-				examStudent.Note = "Folder '0' not found";
-				await _unitOfWork.SaveChangesAsync();
-				return;
-			}
-
-			var s3Path = $"{exam.ExamCode}/{studentCode}";
+		var s3Path = $"{exam.ExamCode}/{folderName}";
 			
 			// Check for .docx files directly in folder "0" first
 			var existingDocxFiles = Directory.GetFiles(zeroFolderPath, "*.docx", SearchOption.TopDirectoryOnly)
@@ -262,97 +241,67 @@ namespace BLL.Service
 				}
 			}
 
-			// Process all Word files found
-			if (allWordFiles.Count == 0)
-			{
-				// No Word files found
-				examStudent.Status = ExamStudentStatus.NOT_FOUND;
-				examStudent.Note = hasSolutionZip 
-					? "No .docx files found in folder '0' or solution.zip" 
-					: "solution.zip not found and no .docx files in folder '0'";
-
-				// Still create DocFile record with NOT_FOUND status
-				var docFileNotFound = new DocFile
-				{
-					ExamStudentId = examStudent.Id,
-					ExamZipId = examZip.Id,
-					FileName = hasSolutionZip ? "solution.zip" : "N/A",
-					FilePath = solutionZipS3Url ?? "N/A",
-					ParsedText = null,
-					ParseStatus = DocParseStatus.NOT_FOUND,
-					ParseMessage = examStudent.Note
-				};
-				await _unitOfWork.DocFileRepository.AddAsync(docFileNotFound);
-			}
-			else
-			{
-				// Process each Word file
-				foreach (var wordFilePath in allWordFiles)
-				{
-					var fileName = Path.GetFileName(wordFilePath);
-
-					// Upload Word file to S3
-					string wordFileS3Url;
-					using (var wordFileStream = File.OpenRead(wordFilePath))
-					{
-						wordFileS3Url = await _s3Service.UploadFileAsync(wordFileStream, fileName, s3Path);
-					}
-
-					// Extract text from Word document
-					string? extractedText = null;
-					string? parseMessage = null;
-					DocParseStatus parseStatus;
-
-					try
-					{
-						extractedText = ExtractTextFromWord(wordFilePath);
-						parseStatus = DocParseStatus.OK;
-						parseMessage = "Successfully parsed";
-					}
-					catch (Exception ex)
-					{
-						parseStatus = DocParseStatus.ERROR;
-						parseMessage = $"Error parsing Word document: {ex.Message}";
-					}
-
-					// Create DocFile record
-					var docFile = new DocFile
-					{
-						ExamStudentId = examStudent.Id,
-						ExamZipId = examZip.Id,
-						FileName = fileName,
-						FilePath = wordFileS3Url,
-						ParsedText = extractedText,
-						ParseStatus = parseStatus,
-						ParseMessage = parseMessage
-					};
-					await _unitOfWork.DocFileRepository.AddAsync(docFile);
-				}
-
-				// Update ExamStudent status
-				examStudent.Status = ExamStudentStatus.PARSED;
-				examStudent.Note = $"Processed {allWordFiles.Count} Word file(s)";
-			}
-
-			await _unitOfWork.SaveChangesAsync();
-		}
-
-		private string ExtractStudentCode(string folderName)
+		// Process all Word files found
+		if (allWordFiles.Count == 0)
 		{
-			// Try to extract student code from folder name
-			// Format: Anhddhse170283 -> extract "se170283"
-			// Pattern: find last occurrence of "se" or "SE" followed by digits
-			var match = Regex.Match(folderName, @"(se|SE)(\d+)", RegexOptions.IgnoreCase);
-			if (match.Success)
-			{
-				return match.Value.ToLower(); // Return "se170283"
-			}
-
-			// If no pattern found, use the entire folder name
-			return folderName;
+			// No Word files found - throw error to be caught by outer try-catch
+			var errorMsg = hasSolutionZip 
+				? "No .docx files found in folder '0' or solution.zip" 
+				: "solution.zip not found and no .docx files in folder '0'";
+			throw new Exception(errorMsg);
 		}
 
-		public string ExtractTextFromWord(string wordFilePath)
+		// Process each Word file
+		foreach (var wordFilePath in allWordFiles)
+		{
+			var fileName = Path.GetFileName(wordFilePath);
+
+			// Upload Word file to S3
+			string wordFileS3Url;
+			using (var wordFileStream = File.OpenRead(wordFilePath))
+			{
+				wordFileS3Url = await _s3Service.UploadFileAsync(wordFileStream, fileName, s3Path);
+			}
+
+			// Extract text from Word document
+			string? extractedText = null;
+			string? parseMessage = null;
+			DocParseStatus parseStatus;
+
+			try
+			{
+				extractedText = ExtractTextFromWord(wordFilePath);
+				parseStatus = DocParseStatus.OK;
+				parseMessage = "Successfully parsed";
+			}
+			catch (Exception ex)
+			{
+				parseStatus = DocParseStatus.ERROR;
+				parseMessage = $"Error parsing Word document: {ex.Message}";
+			}
+
+			// Create DocFile record
+			var docFile = new DocFile
+			{
+				ExamStudentId = examStudent.Id,
+				ExamZipId = examZip.Id,
+				FileName = fileName,
+				FilePath = wordFileS3Url,
+				ParsedText = extractedText,
+				ParseStatus = parseStatus,
+				ParseMessage = parseMessage
+			};
+			await _unitOfWork.DocFileRepository.AddAsync(docFile);
+		}
+
+		// Update ExamStudent status to PARSED
+		examStudent.Status = ExamStudentStatus.PARSED;
+		examStudent.Note = $"Processed {allWordFiles.Count} Word file(s)";
+
+		await _unitOfWork.SaveChangesAsync();
+		}
+
+	public string ExtractTextFromWord(string wordFilePath)
 		{
 			try
 			{

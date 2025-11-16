@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BLL.Model.Response.ExamQuestion;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -13,5 +14,6 @@ namespace BLL.Model.Response.Exam
 		public string ExamCode { get; set; }
 		public string? Title { get; set; }
 		public string? Description { get; set; }
+		public List<ExamQuestionResponse> Questions { get; set; }
 	}
 }

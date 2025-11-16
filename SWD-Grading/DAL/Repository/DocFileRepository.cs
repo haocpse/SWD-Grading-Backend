@@ -23,12 +23,31 @@ namespace DAL.Repository
 			await _context.Set<DocFile>().AddRangeAsync(docFiles);
 		}
 
-		public async Task<List<DocFile>> GetByExamStudentIdAsync(long examStudentId)
-		{
-			return await _context.Set<DocFile>()
-				.Where(df => df.ExamStudentId == examStudentId)
-				.ToListAsync();
-		}
+	public async Task<List<DocFile>> GetByExamStudentIdAsync(long examStudentId)
+	{
+		return await _context.Set<DocFile>()
+			.Where(df => df.ExamStudentId == examStudentId)
+			.ToListAsync();
 	}
+
+	public async Task<List<DocFile>> GetByExamStudentIdsAsync(List<long> examStudentIds)
+	{
+		return await _context.Set<DocFile>()
+			.Where(df => examStudentIds.Contains(df.ExamStudentId))
+			.ToListAsync();
+	}
+
+	public async Task<List<DocFile>> GetRecentlyParsedDocFilesAsync(int limit = 10)
+	{
+		return await _context.Set<DocFile>()
+			.Include(df => df.ExamStudent)
+			.ThenInclude(es => es.Student)
+			.Where(df => df.ParseStatus == Model.Enums.DocParseStatus.OK 
+				&& !string.IsNullOrWhiteSpace(df.ParsedText))
+			.OrderByDescending(df => df.Id)
+			.Take(limit)
+			.ToListAsync();
+	}
+}
 }
 

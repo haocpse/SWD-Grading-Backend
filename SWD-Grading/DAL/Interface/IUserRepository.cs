@@ -11,5 +11,6 @@ namespace DAL.Interface
 	{
         Task<User?> GetByUsername(string username);
         Task<bool> IsUsernameExists(string username);
-    }
+		Task<User?> GetByTeacherCodeAsync(string teacherCode);
+	}
 }

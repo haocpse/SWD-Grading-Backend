@@ -10,6 +10,5 @@ namespace BLL.Model.Request.Exam
 	{
 		public string ExamCode { get; set; }
 		public string? Title { get; set; }
-		public string? Description { get; set; }
 	}
 }
