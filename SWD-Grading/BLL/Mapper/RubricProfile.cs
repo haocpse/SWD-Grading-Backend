@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using BLL.Model.Request.Rubric;
 using BLL.Model.Response.Rubric;
 using Model.Entity;
 using System;
@@ -14,6 +15,8 @@ namespace BLL.Mapper
 		public RubricProfile()
 		{
 			CreateMap<Rubric, RubricResponse>();
+			CreateMap<UpdateRubricRequest, Rubric>();
+			CreateMap<CreateRubricRequest, Rubric>();
 		}
 
 	}

@@ -1,4 +1,5 @@
-﻿using BLL.Model.Response.Rubric;
+﻿using BLL.Model.Request.Rubric;
+using BLL.Model.Response.Rubric;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,8 @@ namespace BLL.Interface
 	{
 
 		Task<IEnumerable<RubricResponse>> GetRubricByQuestionId(long id);
-
+		Task<RubricResponse> UpdateAsync(long id, UpdateRubricRequest request);
+		Task DeleteAsync(long id);
+		Task<RubricResponse> CreateAsync(long questionId, CreateRubricRequest request);
 	}
 }

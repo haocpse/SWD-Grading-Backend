@@ -11,7 +11,7 @@ namespace Model.Entity
 	{
 		public int Id { get; set; }
 		public string Username { get; set; }
-		public string TeacherCode { get; set; }
+		public string? TeacherCode { get; set; }
 		public string PasswordHash { get; set; }
 		public bool IsActive { get; set; }
 		public UserRole Role { get; set; }
