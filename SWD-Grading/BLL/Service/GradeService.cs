@@ -27,6 +27,35 @@ namespace BLL.Service
             _mapper = mapper;
         }
 
+        public async Task<PagingResponse<GradeResponse>> GetAllByExamStudentId(long examStudentId, PagedRequest request)
+        {
+            var query = _unitOfWork.GradeRepository
+                .Query(asNoTracking: true)
+                .Where(g => g.ExamStudentId == examStudentId);
+
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalItems / request.PageSize);
+
+            var gradeEntities = await query
+                .OrderByDescending(g => g.GradedAt)
+                .Skip(request.Skip)
+                .Take(request.PageSize)
+                .ToListAsync();
+
+            var grades = _mapper.Map<List<GradeResponse>>(gradeEntities);
+
+            var pagedResponse = new PagingResponse<GradeResponse>
+            {
+                Page = request.PageIndex,
+                Size = request.PageSize,
+                TotalPages = totalPages,
+                TotalItems = totalItems,
+                Result = grades
+            };
+
+            return pagedResponse;
+        }
+
         public async Task<PagingResponse<GradeResponse>> GetAll(PagedRequest request)
         {
             var query = _unitOfWork.GradeRepository.Query(asNoTracking: true);

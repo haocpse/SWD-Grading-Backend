@@ -11,5 +11,6 @@ namespace DAL.Interface
     {
         Task<IEnumerable<Grade>> GetAll();
         Task<Grade?> GetById(long id);
+        Task<IEnumerable<Grade>> GetByExamStudentId(long examStudentId);
     }
 }

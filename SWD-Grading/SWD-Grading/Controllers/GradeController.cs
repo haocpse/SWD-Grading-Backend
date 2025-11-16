@@ -18,10 +18,10 @@ namespace SWD_Grading.Controllers
             _gradeService = gradeService;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAllGrades([FromQuery] PagedRequest request)
+        [HttpGet("/GetByExamStudentId/{id}")]
+        public async Task<IActionResult> GetAllGrades([FromQuery] PagedRequest request, long id)
         {
-            var grades = await _gradeService.GetAll(request);
+            var grades = await _gradeService.GetAllByExamStudentId(id, request);
 
             var response = new BaseResponse<PagingResponse<GradeResponse>>
             {
@@ -33,6 +33,21 @@ namespace SWD_Grading.Controllers
 
             return Ok(response);
         }
+            //[HttpGet]
+            //public async Task<IActionResult> GetAllGrades([FromQuery] PagedRequest request)
+            //{
+            //    var grades = await _gradeService.GetAll(request);
+
+            //    var response = new BaseResponse<PagingResponse<GradeResponse>>
+            //    {
+            //        Code = 200,
+            //        Success = true,
+            //        Message = "Grades retrieved successfully",
+            //        Data = grades
+            //    };
+
+            //    return Ok(response);
+            //}
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetGradeById(long id)

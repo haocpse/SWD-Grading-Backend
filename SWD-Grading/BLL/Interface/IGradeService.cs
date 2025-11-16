@@ -17,5 +17,6 @@ namespace BLL.Interface
         Task<long> Create(GradeRequest request);
         Task Update(GradeRequest request, long id);
         Task Delete(long id);
+        Task<PagingResponse<GradeResponse>> GetAllByExamStudentId(long examStudentId, PagedRequest request);
     }
 }

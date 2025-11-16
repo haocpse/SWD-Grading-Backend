@@ -30,5 +30,12 @@ namespace DAL.Repository
                 .AsNoTracking()
                 .FirstOrDefaultAsync(g => g.Id == id);
         }
+
+        public async Task<IEnumerable<Grade>> GetByExamStudentId(long examStudentId)
+        {
+            return await _context.Grades
+                .AsNoTracking()
+                .Where(g => g.ExamStudentId == examStudentId).ToListAsync();
+        }
     }
 }
