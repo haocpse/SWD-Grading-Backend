@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BLL.Model.Response
+namespace BLL.Model.Response.Auth
 {
     public class RegisterResponse
     {
