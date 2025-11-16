@@ -1,4 +1,5 @@
 ﻿using DAL.Interface;
+using Microsoft.EntityFrameworkCore;
 using Model.Entity;
 using System;
 using System.Collections.Generic;
@@ -15,5 +16,15 @@ namespace DAL.Repository
 		{
 			_context = context;
 		}
-	}
+
+        public async Task<User?> GetByUsername(string username)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+        }
+
+        public async Task<bool> IsUsernameExists(string username)
+        {
+            return await _context.Users.AnyAsync(x => x.Username == username);
+        }
+    }
 }
