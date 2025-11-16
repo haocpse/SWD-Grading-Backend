@@ -235,24 +235,12 @@ namespace BLL.Service
 				await _unitOfWork.ExamStudentRepository.AddRangeAsync(examStudents);
 				saved = true;
 			}
-
-			foreach (var q in questions)
-			{
-				ValidateExamQuestion(q);
-
-				if (!rubrics.Any(r => r.ExamQuestion == q))
-					throw new AppException($"Question '{q.QuestionText}' must have at least 1 rubric.", 400);
-			}
 			if (questions.Count > 0)
 			{
 				await _unitOfWork.ExamQuestionRepository.AddRangeAsync(questions);
 				saved = true;
 			}
 				
-			foreach (var r in rubrics)
-			{
-				ValidateRubric(r);
-			}
 			if (rubrics.Count > 0)
 			{
 				await _unitOfWork.RubricRepository.AddRangeAsync(rubrics);
@@ -362,37 +350,7 @@ namespace BLL.Service
 			return response;
 		}
 
-		private void ValidateExamQuestion(ExamQuestion q)
-		{
-			if (q.ExamId <= 0)
-				throw new AppException("Invalid ExamId for question.", 400);
 
-			if (q.QuestionNumber <= 0)
-				throw new AppException($"Invalid QuestionNumber for '{q.QuestionText}'.", 400);
 
-			if (q.MaxScore < 0)
-				throw new AppException($"Question '{q.QuestionText}' has invalid MaxScore.", 400);
-
-			if (q.RelatedDocSection != null && q.RelatedDocSection.Length > 255)
-				throw new AppException($"RelatedDocSection exceeds max length 255.", 400);
-		}
-
-		private void ValidateRubric(Rubric r)
-		{
-			if (r.ExamQuestionId <= 0)
-				throw new AppException("Invalid ExamQuestionId for rubric.", 400);
-
-			if (string.IsNullOrWhiteSpace(r.Criterion))
-				throw new AppException("Rubric Criterion is required.", 400);
-
-			if (r.Criterion.Length > 255)
-				throw new AppException($"Rubric '{r.Criterion}' exceeds max length 255.", 400);
-
-			if (r.MaxScore <= 0)
-				throw new AppException($"Rubric '{r.Criterion}' has invalid MaxScore.", 400);
-
-			if (r.OrderIndex <= 0)
-				throw new AppException($"Rubric '{r.Criterion}' has invalid OrderIndex.", 400);
-		}
 	}
 }
