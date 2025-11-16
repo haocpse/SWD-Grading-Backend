@@ -1,6 +1,7 @@
 using DAL.Interface;
 using Microsoft.EntityFrameworkCore;
 using Model.Entity;
+using Model.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,15 +32,45 @@ namespace DAL.Repository
 				.FirstOrDefaultAsync(es => es.ExamId == examId && es.StudentId == studentId);
 		}
 
-		public async Task<List<ExamStudent>> GetByExamZipIdAsync(long examZipId)
-		{
-			// Get ExamStudent records associated with a specific ExamZip through DocFile relationship
-			return await _context.Set<ExamStudent>()
-				.Include(es => es.Student)
-				.Where(es => _context.Set<DocFile>()
-					.Any(df => df.ExamStudentId == es.Id && df.ExamZipId == examZipId))
-				.ToListAsync();
-		}
+	public async Task<List<ExamStudent>> GetByExamZipIdAsync(long examZipId)
+	{
+		// Get ExamStudent records associated with a specific ExamZip through DocFile relationship
+		return await _context.Set<ExamStudent>()
+			.Include(es => es.Student)
+			.Where(es => _context.Set<DocFile>()
+				.Any(df => df.ExamStudentId == es.Id && df.ExamZipId == examZipId))
+			.ToListAsync();
 	}
+
+	public async Task<List<ExamStudent>> GetByExamIdWithDetailsAsync(long examId, int skip, int take, ExamStudentStatus? statusFilter = null)
+	{
+		var query = _context.Set<ExamStudent>()
+			.Include(es => es.Student)
+			.Where(es => es.ExamId == examId);
+
+		if (statusFilter.HasValue)
+		{
+			query = query.Where(es => es.Status == statusFilter.Value);
+		}
+
+		return await query
+			.OrderBy(es => es.Student.StudentCode)
+			.Skip(skip)
+			.Take(take)
+			.ToListAsync();
+	}
+
+	public async Task<int> CountByExamIdAsync(long examId, ExamStudentStatus? statusFilter = null)
+	{
+		var query = _context.Set<ExamStudent>().Where(es => es.ExamId == examId);
+
+		if (statusFilter.HasValue)
+		{
+			query = query.Where(es => es.Status == statusFilter.Value);
+		}
+
+		return await query.CountAsync();
+	}
+}
 }
 

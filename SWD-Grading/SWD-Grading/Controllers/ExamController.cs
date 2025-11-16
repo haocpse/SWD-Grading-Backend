@@ -5,6 +5,8 @@ using BLL.Model.Response.Exam;
 using BLL.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Model.Request;
+using Model.Response;
 
 namespace SWD_Grading.Controllers
 {
@@ -14,11 +16,13 @@ namespace SWD_Grading.Controllers
 	{
 
 		private readonly IExamService _examService;
+		private readonly IExamStudentService _examStudentService;
 		private readonly ITesseractOcrService _ocrService;
-		public ExamController(IExamService examService, ITesseractOcrService ocrService)
+		public ExamController(IExamService examService, ITesseractOcrService ocrService, IExamStudentService examStudentService)
 		{
 			_examService = examService;
 			_ocrService = ocrService;
+		    _examStudentService = examStudentService;
 		}
 
 		[HttpPost]
@@ -77,20 +81,21 @@ namespace SWD_Grading.Controllers
 			return Ok(response);
 		}
 
-		[HttpDelete("{id}")]
-		public async Task<IActionResult> DeleteExam(long id)
+	[HttpDelete("{id}")]
+	public async Task<IActionResult> DeleteExam(long id)
+	{
+		var success = await _examService.DeleteAsync(id);
+
+		BaseResponse<bool> response = new()
 		{
-			var success = await _examService.DeleteAsync(id);
+			Code = 204,
+			Message = "Delete exam successfully",
+			Data = success
+		};
 
-			BaseResponse<bool> response = new()
-			{
-				Code = 204,
-				Message = "Delete exam successfully",
-				Data = success
-			};
+		return NoContent();
+	}
 
-			return NoContent();
-		}
 
 		[HttpPut("{id}/description")]
 		[Consumes("multipart/form-data")]
@@ -138,5 +143,18 @@ namespace SWD_Grading.Controllers
 			});
 		}
 
+	[HttpGet("{examId}/students")]
+	public async Task<IActionResult> GetExamStudents(long examId, [FromQuery] ExamStudentFilter filter)
+	{
+		var result = await _examStudentService.GetExamStudentsByExamIdAsync(examId, filter);
+
+		BaseResponse<PagingResponse<ExamStudentResponse>> response = new()
+		{
+			Code = 200,
+			Message = "Get exam students successfully",
+			Data = result
+		};
+
+		return Ok(response);
 	}
 }

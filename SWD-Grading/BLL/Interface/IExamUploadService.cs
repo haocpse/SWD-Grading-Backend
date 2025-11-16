@@ -1,4 +1,6 @@
+using BLL.Model.Response;
 using Microsoft.AspNetCore.Http;
+using Model.Request;
 using Model.Response;
 using System;
 using System.Collections.Generic;
@@ -24,6 +26,13 @@ namespace BLL.Interface
 		/// <param name="examZipId">ExamZip ID</param>
 		/// <returns>Processing status response</returns>
 		Task<ProcessingStatusResponse> GetProcessingStatusAsync(long examZipId);
+
+		/// <summary>
+		/// Get all exam zips with paging and filters
+		/// </summary>
+		/// <param name="filter">Filter parameters</param>
+		/// <returns>Paged exam zip response</returns>
+		Task<PagingResponse<ExamZipResponse>> GetAllExamZipsAsync(ExamZipFilter filter);
 	}
 }
 

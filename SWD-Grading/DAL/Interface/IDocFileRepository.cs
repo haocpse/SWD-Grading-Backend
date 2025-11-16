@@ -11,6 +11,7 @@ namespace DAL.Interface
 	{
 		Task BulkInsertAsync(List<DocFile> docFiles);
 		Task<List<DocFile>> GetByExamStudentIdAsync(long examStudentId);
+		Task<List<DocFile>> GetByExamStudentIdsAsync(List<long> examStudentIds);
 	}
 }
 

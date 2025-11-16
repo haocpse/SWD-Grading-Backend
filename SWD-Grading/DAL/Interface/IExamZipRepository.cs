@@ -12,6 +12,8 @@ namespace DAL.Interface
 	{
 		Task<ExamZip?> GetByIdAsync(long id);
 		Task<List<ExamZip>> GetPendingExamZipsAsync();
+		Task<List<ExamZip>> GetPagedWithDetailsAsync(int skip, int take, long? examIdFilter = null, ParseStatus? statusFilter = null);
+		Task<int> CountAsync(long? examIdFilter = null, ParseStatus? statusFilter = null);
 	}
 }
 

@@ -153,10 +153,13 @@ namespace SWD_Grading
 
 				return new TesseractOcrService(tessdataPath, uow);
 			});
-			builder.Services.AddScoped<IS3Service, S3Service>();
-			builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
-			builder.Services.AddScoped<IExamUploadService, ExamUploadService>();
-			builder.Services.AddHostedService<BackgroundJobService>();
+		builder.Services.AddScoped<IAuthService, AuthService>();
+		builder.Services.AddScoped<IExamService, ExamService>();
+		builder.Services.AddScoped<IExamStudentService, ExamStudentService>();
+		builder.Services.AddScoped<IS3Service, S3Service>();
+		builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
+		builder.Services.AddScoped<IExamUploadService, ExamUploadService>();
+		builder.Services.AddHostedService<BackgroundJobService>();
 
 			// Repositories
 			builder.Services.AddScoped<IUserRepository, UserRepository>();
