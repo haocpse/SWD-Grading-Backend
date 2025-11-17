@@ -29,15 +29,18 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore
+        working-directory: SWD-Grading
+        run: dotnet restore SWD-Grading.sln
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        working-directory: SWD-Grading
+        run: dotnet build SWD-Grading.sln --configuration Release --no-restore
 
       - name: Docker login
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ vars.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build Docker image
+        working-directory: SWD-Grading
         run: docker build -t ${{ vars.DOCKER_USERNAME }}/swd-grading-backend:latest -f SWD-Grading/Dockerfile .
 
       - name: Push Docker image
