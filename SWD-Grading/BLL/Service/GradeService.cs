@@ -92,18 +92,18 @@ namespace BLL.Service
 
 
 
-		public async Task<long> Create(long examStudentId)
+		public async Task<long> Create(GradeCreateRequest request)
 		{
 			var newGrade = new Grade
 			{
-				ExamStudentId = examStudentId,
+				ExamStudentId = request.ExamStudentId,
 				TotalScore = 0,
 				Comment = "",
 				GradedAt = DateTime.UtcNow,
 				GradedBy = null,
 				Status = GradeStatus.CREATED
 			};
-            var existingGrades = await _unitOfWork.GradeRepository.GetByExamStudentId(examStudentId);
+            var existingGrades = await _unitOfWork.GradeRepository.GetByExamStudentId(request.ExamStudentId);
             if (existingGrades.Any())
             {
                 int maxAttempt = existingGrades.Max(g => g.Attempt);
@@ -150,7 +150,7 @@ namespace BLL.Service
 			await _unitOfWork.SaveChangesAsync();
 		}
 
-		public async Task Update(GradeRequest request, long id)
+		public async Task Update(GradeUpdateRequest request, long id)
 		{
 			var existingExamStudent = await _unitOfWork.ExamStudentRepository.GetByIdAsync(request.ExamStudentId);
 			existingExamStudent.Status = ExamStudentStatus.GRADED;

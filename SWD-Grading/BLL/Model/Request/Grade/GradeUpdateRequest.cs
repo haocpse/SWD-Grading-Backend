@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace BLL.Model.Request.Grade
 {
-    public class GradeRequest
+    public class GradeUpdateRequest
     {
         public long ExamStudentId { get; set; }
         public decimal TotalScore { get; set; }
