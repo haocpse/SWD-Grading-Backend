@@ -10,6 +10,6 @@ namespace Model.Enums
     {
         CREATED,
         IN_PROGRESS,
-        COMPLETED
+        GRADED
     }
 }
