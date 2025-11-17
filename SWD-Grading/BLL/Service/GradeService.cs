@@ -91,7 +91,17 @@ namespace BLL.Service
 
 		public async Task<long> Create(GradeRequest request)
 		{
-			var gradeEntity = _mapper.Map<Grade>(request);
+			var existingGrades = await _unitOfWork.GradeRepository.GetByExamStudentId(request.ExamStudentId);
+            if (existingGrades.Any())
+            {
+                int maxAttempt = existingGrades.Max(g => g.Attempt);
+                request.Attempt = maxAttempt + 1;
+            }
+            else
+            {
+                request.Attempt = 1;
+            }
+            var gradeEntity = _mapper.Map<Grade>(request);
 			await _unitOfWork.GradeRepository.AddAsync(gradeEntity);
 			await _unitOfWork.SaveChangesAsync();
 			return gradeEntity.Id;
