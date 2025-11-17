@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SWD_Grading.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/grade")]
     [ApiController]
     public class GradeController : ControllerBase
     {
@@ -18,7 +18,7 @@ namespace SWD_Grading.Controllers
             _gradeService = gradeService;
         }
 
-        [HttpGet("/GetByExamStudentId/{id}")]
+        [HttpGet("GetByExamStudentId/{id}")]
         public async Task<IActionResult> GetAllGrades([FromQuery] PagedRequest request, long id)
         {
             var grades = await _gradeService.GetAllByExamStudentId(id, request);

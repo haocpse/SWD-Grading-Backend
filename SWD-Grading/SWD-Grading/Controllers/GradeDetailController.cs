@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SWD_Grading.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/gradeDetail")]
     [ApiController]
     public class GradeDetailController : ControllerBase
     {
