@@ -1,0 +1,101 @@
+name: CI/CD SWD Grading Backend
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: PROD
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET 8.0
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Docker login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ vars.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ vars.DOCKER_USERNAME }}/swd-grading-backend:latest -f SWD-Grading/Dockerfile .
+
+      - name: Push Docker image
+        run: docker push ${{ vars.DOCKER_USERNAME }}/swd-grading-backend:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: PROD
+    steps:
+      - name: SSH to server and deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ vars.HOST_IP }}
+          username: root
+          key: ${{ secrets.SECRET_KEY }}
+          script: |
+            cd ${{ vars.DEPLOY_PATH }}
+            echo "Deploying SWD Grading Backend..."
+            
+            # Pull latest images
+            docker compose pull
+            
+            # Stop and remove old containers
+            docker compose down --remove-orphans || true
+            docker rm -f $(docker ps -a -q --filter "name=swd-grading-backend") || true
+            
+            # Clean up old images
+            docker image prune -f
+            
+            # Start services
+            docker compose up -d
+            
+            # Wait for SQL Server to be ready
+            echo "Waiting for SQL Server to be ready..."
+            sleep 30
+            
+            # Run database migrations
+            echo "Running database migrations..."
+            docker run --rm \
+              --network swd-grading_swd-grading-network \
+              -v $(pwd):/src \
+              -w /src \
+              mcr.microsoft.com/dotnet/sdk:8.0 \
+              bash -c "
+                dotnet tool install --global dotnet-ef --version 8.* 2>/dev/null || true && \
+                export PATH=\"\$PATH:/root/.dotnet/tools\" && \
+                dotnet ef database update \
+                  --project DAL/DAL.csproj \
+                  --startup-project SWD-Grading/SWD-Grading.csproj \
+                  --connection 'Server=sqlserver-db,1433;Database=SWDGradingDB;User Id=sa;Password=${{ secrets.DB_PASSWORD }};TrustServerCertificate=True;Encrypt=False;' \
+                  --verbose
+              " || echo "Migration failed, but continuing..."
+            
+            # Clean up dangling images
+            docker rmi $(docker images -q --filter "dangling=true") || true
+            
+            # Show running containers
+            echo "Deployment complete. Running containers:"
+            docker ps
+
