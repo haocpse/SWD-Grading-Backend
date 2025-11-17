@@ -115,7 +115,26 @@ namespace BLL.Service
             }
 			await _unitOfWork.GradeRepository.AddAsync(newGrade);
 			await _unitOfWork.SaveChangesAsync();
-			return newGrade.Id;
+
+            var questions = await _unitOfWork.ExamQuestionRepository
+                .GetQuestionByExamId(request.ExamId);
+
+            List<GradeDetail> gradeDetails = new();
+
+            foreach (var question in questions)
+            {
+                foreach (var rubric in question.Rubrics)
+                {
+                    gradeDetails.Add(new GradeDetail
+                    {
+                        Grade = newGrade,
+                        Rubric = rubric
+                    });
+                }
+            }
+
+            await _unitOfWork.GradeDetailRepository.AddRangeAsync(gradeDetails);
+            return newGrade.Id;
 		}
 
 		public async Task CreateRange(long examId, List<AddGradeRangeRequest> requests)
