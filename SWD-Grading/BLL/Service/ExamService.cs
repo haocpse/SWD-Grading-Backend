@@ -476,7 +476,9 @@ namespace BLL.Service
 				for (int i = 0; i < examStudents.Count; i++)
 				{
 					var stud = examStudents[i];
-					var grade = stud.Grades.FirstOrDefault();
+					var grade = stud.Grades
+						.OrderByDescending(g => g.Attempt)
+						.FirstOrDefault();
 					if (grade == null) continue;
 
 					var row = rows[rowStart + i];
@@ -485,7 +487,6 @@ namespace BLL.Service
 					{
 						string cri = detail.Rubric.Criterion.Trim();
 						decimal score = detail.Score;
-
 						if (!rubricMap.TryGetValue(cri, out int col)) continue;
 
 						var cell = GetOrCreateCell(wsPart, row, col);
@@ -531,7 +532,8 @@ namespace BLL.Service
 			// 7. Upload file lên S3
 			//---------------------------------------------------------
 			ms.Position = 0;
-			string fileName = $"GradeExport_{id}_{DateTime.Now.Ticks}.xlsx";
+			string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+			string fileName = $"GradeExport_[{exam.ExamCode}]_[{timestamp}].xlsx";
 			string uploadPath = $"{exam.ExamCode}/grade-export";
 			string url = await _s3Service.UploadExcelFileAsync(ms, fileName, uploadPath);
 
