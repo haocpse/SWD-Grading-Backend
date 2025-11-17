@@ -417,7 +417,7 @@ namespace BLL.Service
 
 		public async Task<GradeExportResponse> ExportGradeExcel(int userId, long id)
 		{
-			// 1. Tải file từ S3
+			// 1. Load file template từ S3
 			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(id);
 			if (exam == null)
 				throw new AppException("Exam not found", 404);
@@ -425,12 +425,11 @@ namespace BLL.Service
 			var key = GetS3KeyFromUrl(exam.OriginalExcel);
 			var original = await DownloadFromS3Async(key);
 
-			// 2. Clone stream để OpenXML ghi lên
+			// Copy stream để chỉnh sửa bằng OpenXML
 			var ms = new MemoryStream();
 			original.CopyTo(ms);
 			ms.Position = 0;
 
-			// IMPORTANT: AutoSave = true
 			var settings = new OpenSettings { AutoSave = true };
 
 			using (var doc = SpreadsheetDocument.Open(ms, true, settings))
@@ -444,12 +443,10 @@ namespace BLL.Service
 				var ws = wsPart.Worksheet;
 				var rows = ws.GetFirstChild<SheetData>()!.Elements<Row>().ToList();
 
-				Console.WriteLine("[DEBUG] Active sheet = " + sheet.Name);
-
 				//---------------------------------------------------------
-				// 3. Mapping rubric
+				// 3. Mapping rubric row
 				//---------------------------------------------------------
-				int colD = 3, colL = 11, colTotal = 12;
+				int colD = 3, colL = 11;
 				Row rubricRow = rows[1];
 				var rubricCells = rubricRow.Elements<Cell>().ToList();
 				var rubricMap = new Dictionary<string, int>();
@@ -457,7 +454,6 @@ namespace BLL.Service
 				for (int col = colD; col <= colL; col++)
 				{
 					var name = GetCellValue(doc, rubricCells[col]);
-					Console.WriteLine($"[DEBUG] Rubric '{name}' at col {col}");
 					if (!string.IsNullOrWhiteSpace(name))
 						rubricMap[name.Trim()] = col;
 				}
@@ -466,24 +462,16 @@ namespace BLL.Service
 				// 4. Load student scores
 				//---------------------------------------------------------
 				var examStudents = await _unitOfWork.ExamStudentRepository.GetExamStudentByExamId(id);
-
 				int rowStart = 3;
 
-				Console.WriteLine($"[DEBUG] Excel Students = {rows.Count - rowStart}");
-				Console.WriteLine($"[DEBUG] DB Students = {examStudents.Count}");
-
 				//---------------------------------------------------------
-				// 5. Xóa merge cells nếu có
+				// 5. Xóa merge cells (nếu tồn tại)
 				//---------------------------------------------------------
 				var merge = ws.Elements<MergeCells>().FirstOrDefault();
-				if (merge != null)
-				{
-					Console.WriteLine("[DEBUG] Removing merge cells...");
-					merge.Remove();
-				}
+				if (merge != null) merge.Remove();
 
 				//---------------------------------------------------------
-				// 6. Fill data vào Excel
+				// 6. Fill scores — GIỮ CÔNG THỨC
 				//---------------------------------------------------------
 				for (int i = 0; i < examStudents.Count; i++)
 				{
@@ -493,8 +481,6 @@ namespace BLL.Service
 
 					var row = rows[rowStart + i];
 
-					Console.WriteLine($"[DEBUG] ---- Filling: {stud.Student.StudentCode} ----");
-
 					foreach (var detail in grade.Details)
 					{
 						string cri = detail.Rubric.Criterion.Trim();
@@ -503,49 +489,55 @@ namespace BLL.Service
 						if (!rubricMap.TryGetValue(cri, out int col)) continue;
 
 						var cell = GetOrCreateCell(wsPart, row, col);
-						cell.CellFormula = null;
+
+						// ❗ Nếu ô có công thức → không ghi đè
+						if (cell.CellFormula != null)
+						{
+							Console.WriteLine($"[DEBUG] Skip formula cell: {cell.CellReference}");
+							continue;
+						}
+
+						// Ghi giá trị
 						cell.CellValue = new CellValue(score.ToString());
 						cell.DataType = CellValues.Number;
-
-						Console.WriteLine($"[DEBUG] Fill {cri} = {score}");
 					}
-
-					// TOTAL
-					//decimal total = grade.Details.Sum(x => x.Score);
-					//var totalCell = GetOrCreateCell(wsPart, row, colTotal);
-					//totalCell.CellFormula = null;
-					//totalCell.CellValue = new CellValue(total.ToString());
-					//totalCell.DataType = CellValues.Number;
 				}
 
-				// Remove calcChain if exists
-				var calcChainPart = wbPart.GetPartsOfType<CalculationChainPart>().FirstOrDefault();
-				if (calcChainPart != null)
+				// ❗ BẢO TOÀN CÔNG THỨC → KHÔNG XOÁ calcChain
+				// KHÔNG ĐỤNG TỚI calcChain.xml
+				var calcProps = wbPart.Workbook.CalculationProperties;
+
+				if (calcProps == null)
 				{
-					Console.WriteLine("[DEBUG] Removing calcChain.xml");
-					wbPart.DeletePart(calcChainPart);
+					calcProps = new CalculationProperties()
+					{
+						CalculationId = 0,
+						ForceFullCalculation = true,
+						FullCalculationOnLoad = true
+					};
+					wbPart.Workbook.Append(calcProps);
+				}
+				else
+				{
+					calcProps.ForceFullCalculation = true;
+					calcProps.FullCalculationOnLoad = true;
 				}
 
-				// Save
 				ws.Save();
 				wbPart.Workbook.Save();
-
-				// Dispose() sẽ flush toàn bộ xuống stream ms
 			}
 
 			//---------------------------------------------------------
-			// 7. Upload S3
+			// 7. Upload file lên S3
 			//---------------------------------------------------------
 			ms.Position = 0;
-
 			string fileName = $"GradeExport_{id}_{DateTime.Now.Ticks}.xlsx";
 			string uploadPath = $"{exam.ExamCode}/grade-export";
-
 			string url = await _s3Service.UploadExcelFileAsync(ms, fileName, uploadPath);
 
-			Console.WriteLine("[DEBUG] Uploaded = " + url);
-
-			// 8. Ghi vào DB
+			//---------------------------------------------------------
+			// 8. Lưu DB
+			//---------------------------------------------------------
 			var export = new GradeExport
 			{
 				ExamId = id,
