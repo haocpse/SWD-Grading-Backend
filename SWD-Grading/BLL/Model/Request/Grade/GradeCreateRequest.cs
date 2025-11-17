@@ -9,5 +9,6 @@ namespace BLL.Model.Request.Grade
     public class GradeCreateRequest
     {
         public long ExamStudentId { get; set; }
+        public long ExamId { get; set; }
     }
 }
