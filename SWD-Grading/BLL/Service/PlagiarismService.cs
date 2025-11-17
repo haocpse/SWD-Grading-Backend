@@ -120,6 +120,12 @@ namespace BLL.Service
 			var similarityResults = new List<SimilarityResult>();
 			foreach (var pair in similarPairs)
 			{
+				if (await IsIgnoredPair(pair.DocFile1Id, pair.DocFile2Id))
+				{
+					_logger.LogInformation($"[PlagiarismCheck] SKIP pair {pair.DocFile1Id} <-> {pair.DocFile2Id} (teacher marked NOT SIMILAR)");
+					continue;
+				}
+
 				// Get the matched document info
 				var matchedDocFile = await _unitOfWork.DocFileRepository.GetByIdAsync(pair.DocFile2Id);
 				if (matchedDocFile == null) continue;
@@ -399,6 +405,20 @@ namespace BLL.Service
 				TeacherNotes = notes,
 				TeacherVerifiedAt = similarityResult.TeacherVerifiedAt
 			};
+		}
+		private async Task<bool> IsIgnoredPair(long docFileId1, long docFileId2)
+		{
+			var db = _unitOfWork.SimilarityCheckRepository.GetDbContext();
+
+			return await db.Set<SimilarityResult>()
+				.AnyAsync(sr =>
+					(
+						(sr.DocFile1Id == docFileId1 && sr.DocFile2Id == docFileId2) ||
+						(sr.DocFile1Id == docFileId2 && sr.DocFile2Id == docFileId1)
+					)
+					&&
+					sr.VerificationStatus == VerificationStatus.TeacherConfirmed_NotSimilar
+				);
 		}
 	}
 
