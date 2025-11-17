@@ -90,22 +90,32 @@ namespace BLL.Service
 			return gradeDetailResponse;
 		}
 
-		public async Task<long> Create(GradeRequest request)
+
+
+		public async Task<long> Create(long examStudentId)
 		{
-			var existingGrades = await _unitOfWork.GradeRepository.GetByExamStudentId(request.ExamStudentId);
+			var newGrade = new Grade
+			{
+				ExamStudentId = examStudentId,
+				TotalScore = 0,
+				Comment = "",
+				GradedAt = DateTime.UtcNow,
+				GradedBy = null,
+				Status = GradeStatus.CREATED
+			};
+            var existingGrades = await _unitOfWork.GradeRepository.GetByExamStudentId(examStudentId);
             if (existingGrades.Any())
             {
                 int maxAttempt = existingGrades.Max(g => g.Attempt);
-                request.Attempt = maxAttempt + 1;
+                newGrade.Attempt = maxAttempt + 1;
             }
             else
             {
-                request.Attempt = 1;
+                newGrade.Attempt = 1;
             }
-            var gradeEntity = _mapper.Map<Grade>(request);
-			await _unitOfWork.GradeRepository.AddAsync(gradeEntity);
+			await _unitOfWork.GradeRepository.AddAsync(newGrade);
 			await _unitOfWork.SaveChangesAsync();
-			return gradeEntity.Id;
+			return newGrade.Id;
 		}
 
 		public async Task CreateRange(long examId, List<AddGradeRangeRequest> requests)
