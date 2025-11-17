@@ -28,7 +28,7 @@ namespace DAL.Repository
 		{
 			return await _context.Set<Exam>()
 				.FirstOrDefaultAsync(e => e.ExamCode == examCode);
-		}
+		} 
 	}
 }
 

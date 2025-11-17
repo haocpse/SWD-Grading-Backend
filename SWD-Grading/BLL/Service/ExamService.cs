@@ -30,6 +30,7 @@ using Model.Configuration;
 using Microsoft.Extensions.Configuration;
 using Amazon.S3.Model;
 using OfficeOpenXml;
+using Microsoft.EntityFrameworkCore;
 
 namespace BLL.Service
 {
@@ -650,6 +651,46 @@ namespace BLL.Service
 			ms.Position = 0;
 
 			return ms;
+		}
+
+		public async Task<PagingResponse<ExamResponse>> GetAssignedExam(ExamFilter filter, int userId)
+		{
+			if (filter.Page <= 0)
+				throw new AppException("Page number must be greater than or equal to 1", 400);
+
+			if (filter.Size < 0)
+				throw new AppException("Size must not be negative", 400);
+
+			var filters = new List<Expression<Func<Exam, bool>>>();
+
+			// Teacher được gán grading exam
+			filters.Add(e => e.ExamStudents.Any(es => es.TeacherId == userId));
+
+			var skip = (filter.Page - 1) * filter.Size;
+
+			// Sort newest first
+			Func<IQueryable<Exam>, IOrderedQueryable<Exam>> orderBy =
+				q => q.OrderByDescending(o => o.CreatedAt);
+			var totalItems = await _unitOfWork.ExamRepository.CountAsync(filters);
+
+			var data = await _unitOfWork.ExamRepository.GetPagedAsync<Exam>(
+				skip,
+				filter.Size,
+				filters,
+				orderBy,
+				include: q => q.Include(x => x.ExamStudents),
+				null,
+				asNoTracking: true
+			);
+			var respones = _mapper.Map<IEnumerable<ExamResponse>>(data.ToList());
+			return new PagingResponse<ExamResponse>
+			{
+				Result = respones,
+				Page = filter.Page,
+				Size = filter.Size,
+				TotalItems = totalItems,
+				TotalPages = (int)Math.Ceiling(totalItems / (double)filter.Size)
+			};
 		}
 	}
 }

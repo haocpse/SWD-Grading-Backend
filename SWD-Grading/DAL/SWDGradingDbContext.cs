@@ -87,9 +87,9 @@ namespace DAL
 				entity.Property(e => e.Note)
 					  .HasColumnType("TEXT");
 
-				entity.HasOne(e => e.Exam)
-					  .WithMany()
-					  .HasForeignKey(e => e.ExamId)
+				entity.HasOne(et => et.Exam)
+					  .WithMany(e => e.ExamStudents)
+					  .HasForeignKey(et => et.ExamId)
 					  .OnDelete(DeleteBehavior.Cascade);
 
 				entity.HasOne(e => e.Student)

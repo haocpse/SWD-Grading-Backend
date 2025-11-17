@@ -1,6 +1,7 @@
 using BLL.Interface;
 using BLL.Model.Response;
 using DAL.Interface;
+using Model.Entity;
 using Model.Enums;
 using Model.Request;
 using Model.Response;
@@ -94,6 +95,107 @@ namespace BLL.Service
 					: new List<DocFileResponse>()
 			}).ToList();
 
+			return new PagingResponse<ExamStudentResponse>
+			{
+				Result = result,
+				Page = filter.Page,
+				Size = filter.Size,
+				TotalItems = totalItems,
+				TotalPages = (int)Math.Ceiling((double)totalItems / filter.Size)
+			};
+		}
+		public async Task<PagingResponse<ExamStudentResponse>> GetAssignedExamStudent(int teacherId, long examId, ExamStudentFilter filter)
+		{
+			// Validate pagination
+			if (filter.Page <= 0)
+				throw new ArgumentException("Page must be greater than 0");
+
+			if (filter.Size <= 0)
+				throw new ArgumentException("Size must be greater than 0");
+
+			// Parse status
+			ExamStudentStatus? statusFilter = null;
+			if (!string.IsNullOrEmpty(filter.Status))
+			{
+				if (Enum.TryParse<ExamStudentStatus>(filter.Status, true, out var status))
+					statusFilter = status;
+				else
+					throw new ArgumentException($"Invalid status: {filter.Status}");
+			}
+
+			var skip = (filter.Page - 1) * filter.Size;
+
+			// Count only ExamStudents assigned to teacher
+			var totalItems = await _unitOfWork.ExamStudentRepository
+				.CountByExamIdAndTeacherIdAsync(examId, teacherId, statusFilter);
+
+			if (totalItems == 0)
+			{
+				return new PagingResponse<ExamStudentResponse>
+				{
+					Result = new List<ExamStudentResponse>(),
+					Page = filter.Page,
+					Size = filter.Size,
+					TotalItems = 0,
+					TotalPages = 0
+				};
+			}
+
+			// Get paginated ExamStudents
+			var examStudents = await _unitOfWork.ExamStudentRepository
+				.GetByExamIdAndTeacherIdWithDetailsAsync(
+					examId,
+					teacherId,
+					skip,
+					filter.Size,
+					statusFilter
+				);
+
+			// If no results
+			if (!examStudents.Any())
+			{
+				return new PagingResponse<ExamStudentResponse>
+				{
+					Result = new List<ExamStudentResponse>(),
+					Page = filter.Page,
+					Size = filter.Size,
+					TotalItems = 0,
+					TotalPages = 0
+				};
+			}
+
+			// Get doc files for these exam students
+			var examStudentIds = examStudents.Select(es => es.Id).ToList();
+
+			var docFiles = await _unitOfWork.DocFileRepository
+				.GetByExamStudentIdsAsync(examStudentIds);
+
+			var docFilesByExamStudent = docFiles
+				.GroupBy(df => df.ExamStudentId)
+				.ToDictionary(g => g.Key, g => g.ToList());
+
+			// Map result
+			var result = examStudents.Select(es => new ExamStudentResponse
+			{
+				ExamStudentId = es.Id,
+				StudentCode = es.Student.StudentCode,
+				StudentName = es.Student.FullName,
+				Status = es.Status.ToString(),
+				Note = es.Note,
+
+				DocFiles = docFilesByExamStudent.ContainsKey(es.Id)
+					? docFilesByExamStudent[es.Id].Select(df => new DocFileResponse
+					{
+						DocFileId = df.Id,
+						FileName = df.FileName,
+						FilePath = df.FilePath,
+						ParseStatus = df.ParseStatus.ToString()
+					}).ToList()
+					: new List<DocFileResponse>()
+			})
+			.ToList();
+
+			// Build response
 			return new PagingResponse<ExamStudentResponse>
 			{
 				Result = result,
