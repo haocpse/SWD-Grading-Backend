@@ -36,14 +36,13 @@ namespace BLL.Service
 			}
 
 			// OCR bằng memory
-			using var pix = Pix.LoadFromMemory(imageBytes);
-			using var engine = new TesseractEngine(_tessdataPath, language, EngineMode.Default);
-			using var page = engine.Process(pix);
+			//using var pix = Pix.LoadFromMemory(imageBytes);
+			//using var engine = new TesseractEngine(_tessdataPath, language, EngineMode.Default);
+			//using var page = engine.Process(pix);
 
-			string text = ExtractProblemStatement(page.GetText());
+			//string text = ExtractProblemStatement(page.GetText());
 
 			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(examId);
-			exam.Description = text;
 			var s3Path = $"{exam.ExamCode}";
 			string imageS3Url;
 
