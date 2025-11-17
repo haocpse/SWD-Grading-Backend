@@ -82,7 +82,7 @@ jobs:
             echo "Running database migrations..."
             docker run --rm \
               --network swd-grading_swd-grading-network \
-              -v $(pwd):/src \
+              -v $(pwd)/SWD-Grading:/src \
               -w /src \
               mcr.microsoft.com/dotnet/sdk:8.0 \
               bash -c "
