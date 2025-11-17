@@ -5,6 +5,7 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<RootNamespace>SWD_Grading</RootNamespace>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 	</PropertyGroup>
 
 
@@ -15,6 +16,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Content Include="..\.dockerignore">
+		  <Link>.dockerignore</Link>
+		</Content>
 		<Content Include="tessdata\**\*">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>

@@ -27,3 +27,4 @@ namespace BLL.Model.Response
 	}
 }
 
+

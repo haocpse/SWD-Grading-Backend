@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  sqlserver-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    container_name: sqlserver-db
+    env_file:
+      - .env
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - swd-grading-network
+    restart: unless-stopped
+
+  qdrant-db:
+    image: qdrant/qdrant:latest
+    container_name: qdrant-db
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    networks:
+      - swd-grading-network
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: SWD-Grading/Dockerfile
+    container_name: swd-grading-backend
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      # Database Configuration
+      - ConnectionStrings__DefaultConnection=Server=sqlserver-db,1433;Database=SWDGradingDB;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=False;
+      # JWT Configuration
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpiryInMinutes=${JWT_EXPIRY_MINUTES}
+      # AWS Configuration
+      - AWS__BucketName=${AWS_BUCKET_NAME}
+      - AWS__Region=${AWS_REGION}
+      - AWS__AccessKey=${AWS_ACCESS_KEY}
+      - AWS__SecretKey=${AWS_SECRET_KEY}
+      # File Upload Configuration
+      - FileUpload__MaxFileSizeMB=${FILE_UPLOAD_MAX_SIZE_MB}
+      - FileUpload__AllowedExtensions__0=.zip
+      - FileUpload__TempStoragePath=${FILE_UPLOAD_TEMP_PATH}
+      # Qdrant Configuration
+      - Qdrant__Endpoint=http://qdrant-db:6333
+      - Qdrant__CollectionName=${QDRANT_COLLECTION_NAME}
+      - Qdrant__VectorSize=${QDRANT_VECTOR_SIZE}
+      # OpenAI Configuration
+      - OpenAI__ApiKey=${OPENAI_API_KEY}
+      - OpenAI__Model=${OPENAI_MODEL}
+    volumes:
+      - ./SWD-Grading/temp:/app/temp
+    networks:
+      - swd-grading-network
+    depends_on:
+      - sqlserver-db
+      - qdrant-db
+    restart: unless-stopped
+
+networks:
+  swd-grading-network:
+    driver: bridge
+
+volumes:
+  sqlserver_data:
+  qdrant_storage:
+
