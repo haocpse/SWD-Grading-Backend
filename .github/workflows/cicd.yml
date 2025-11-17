@@ -61,6 +61,18 @@ jobs:
             cd ${{ vars.DEPLOY_PATH }}
             echo "Deploying SWD Grading Backend..."
             
+            # Clone or update repository for migrations
+            if [ -d "repo" ]; then
+              echo "Updating existing repository..."
+              cd repo
+              git fetch origin
+              git reset --hard origin/${{ github.ref_name }}
+              cd ..
+            else
+              echo "Cloning repository..."
+              git clone -b ${{ github.ref_name }} https://github.com/${{ github.repository }}.git repo
+            fi
+            
             # Pull latest images
             docker compose pull
             
@@ -82,21 +94,21 @@ jobs:
             echo "Running database migrations..."
             docker run --rm \
               --network swd-grading_swd-grading-network \
-              -v $(pwd)/SWD-Grading:/src \
+              -v $(pwd)/repo/SWD-Grading:/src \
               -w /src \
               mcr.microsoft.com/dotnet/sdk:8.0 \
               bash -c "
                 dotnet tool install --global dotnet-ef --version 8.* 2>/dev/null || true && \
                 export PATH=\"\$PATH:/root/.dotnet/tools\" && \
                 dotnet ef database update \
-                  --project DAL/DAL.csproj \
-                  --startup-project SWD-Grading/SWD-Grading.csproj \
+                  --project DAL \
+                  --startup-project SWD-Grading \
                   --connection 'Server=sqlserver-db,1433;Database=SWDGradingDB;User Id=sa;Password=${{ secrets.DB_PASSWORD }};TrustServerCertificate=True;Encrypt=False;' \
                   --verbose
               " || echo "Migration failed, but continuing..."
             
             # Clean up dangling images
-            docker rmi $(docker images -q --filter "dangling=true") || true
+            docker rmi $(docker images -q --filter "dangling=true") 2>/dev/null || true
             
             # Show running containers
             echo "Deployment complete. Running containers:"
