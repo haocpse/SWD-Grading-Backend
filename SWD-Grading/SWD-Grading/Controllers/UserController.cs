@@ -24,7 +24,7 @@ namespace SWD_Grading.Controllers
 			_examStudentService = examStudentService;
 		}
 
-		[HttpGet("/exams")]
+		[HttpGet("exams")]
 		public async Task<IActionResult> GetMyExams([FromQuery] ExamFilter filter)
 		{
 			int userId = User.GetUserId();
@@ -39,7 +39,7 @@ namespace SWD_Grading.Controllers
 			return Ok(response);
 		}
 
-		[HttpGet("/exams/{id}/exam-students")]
+		[HttpGet("exams/{id}/exam-students")]
 		public async Task<IActionResult> GetMyExamStudents([FromRoute] long id, [FromQuery] ExamStudentFilter filter)
 		{
 			int userId = User.GetUserId();
