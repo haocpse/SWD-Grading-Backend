@@ -21,6 +21,14 @@ RUN dotnet publish "./SWD-Grading.csproj" -c $BUILD_CONFIGURATION -o /app/publis
 FROM base AS final
 WORKDIR /app
 
+# Install Tesseract OCR and Leptonica dependencies
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    libtesseract-dev \
+    libleptonica-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy published files
 COPY --from=publish /app/publish .
 
