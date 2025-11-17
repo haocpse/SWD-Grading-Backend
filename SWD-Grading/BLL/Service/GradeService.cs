@@ -8,6 +8,7 @@ using BLL.Model.Response.Grade;
 using DAL.Interface;
 using Microsoft.EntityFrameworkCore;
 using Model.Entity;
+using Model.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -141,7 +142,12 @@ namespace BLL.Service
 
 		public async Task Update(GradeRequest request, long id)
 		{
-			var existingGrade = await _unitOfWork.GradeRepository.GetById(id);
+			var existingExamStudent = await _unitOfWork.ExamStudentRepository.GetByIdAsync(request.ExamStudentId);
+			existingExamStudent.Status = ExamStudentStatus.GRADED;
+			await _unitOfWork.ExamStudentRepository.UpdateAsync(existingExamStudent);
+			await _unitOfWork.SaveChangesAsync();
+
+            var existingGrade = await _unitOfWork.GradeRepository.GetById(id);
 			if (existingGrade == null)
 			{
 				throw new KeyNotFoundException("Grade not found");
