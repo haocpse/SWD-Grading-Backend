@@ -115,13 +115,13 @@ namespace SWD_Grading.Controllers
 					await file.CopyToAsync(stream);
 				}
 
-				string rawText = await _ocrService.ExtractText(id, tempFilePath, file, "eng");
+				string url = await _ocrService.ExtractText(id, tempFilePath, file, "eng");
 
 				return Ok(new
 				{
 					code = 200,
 					message = "OCR completed successfully",
-					problemStatement = rawText
+					problemStatement = url
 				});
 			}
 			catch (Exception ex)

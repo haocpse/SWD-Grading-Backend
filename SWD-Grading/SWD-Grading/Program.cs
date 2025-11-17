@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OfficeOpenXml;
+using SWD_Grading.Exceptions;
 using System.Text;
 
 namespace SWD_Grading
@@ -207,7 +208,7 @@ namespace SWD_Grading
 			app.UseAuthentication();
 			app.UseAuthorization();
 
-
+			app.UseMiddleware<GlobalExceptionMiddleware>();
 			app.MapControllers();
 
 			app.Run();

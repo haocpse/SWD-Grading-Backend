@@ -1,4 +1,4 @@
-using DAL.Interface;
+﻿using DAL.Interface;
 using Microsoft.EntityFrameworkCore;
 using Model.Entity;
 using Model.Enums;
@@ -76,8 +76,12 @@ namespace DAL.Repository
 		{
 			return await _context.ExamStudents
 				.Include(es => es.Student)
-				.Include(es => es.Grades).ThenInclude(g => g.Details).ThenInclude(d => d.Rubric)
-				.Where(es => es.ExamId == examId).ToListAsync();
+				.Include(es => es.Grades)
+					.ThenInclude(g => g.Details)
+						.ThenInclude(d => d.Rubric)
+				.Where(es => es.ExamId == examId
+							 && es.Grades.Any(g => g.Status.Equals(GradeStatus.GRADED)))
+				.ToListAsync();
 		}
 	}
 }
