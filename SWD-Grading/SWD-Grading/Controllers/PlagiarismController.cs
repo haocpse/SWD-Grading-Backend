@@ -198,5 +198,30 @@ namespace SWD_Grading.Controllers
 				});
 			}
 		}
+
+		[HttpGet("plagiarism/confirmed")]
+		public async Task<ActionResult<BaseResponse<List<VerificationResponse>>>> GetConfirmedPlagiarism()
+		{
+			try
+			{
+				long userId = User.GetUserId();	
+				var data = await _plagiarismService.GetConfirmedPlagiarismAsync(userId);
+
+				return Ok(new BaseResponse<List<VerificationResponse>>
+				{
+					Success = true,
+					Message = "Confirmed plagiarism cases retrieved successfully.",
+					Data = data
+				});
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(500, new BaseResponse<object>
+				{
+					Success = false,
+					Message = $"Internal server error: {ex.Message}"
+				});
+			}
+		}
 	}
 }
