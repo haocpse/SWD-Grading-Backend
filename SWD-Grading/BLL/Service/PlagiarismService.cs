@@ -428,26 +428,11 @@ namespace BLL.Service
 		{
 			var list = new List<VerificationResponse>();
 			var results = await _unitOfWork.SimilarityResultRepository.GetConfirmedPlagiarismAsync(userId);
+
 			foreach (var sr in results)
 			{
-				// Parse AI JSON if exists
-				bool? aiSimilar = null;
-				decimal? aiScore = null;
-				string? aiSummary = null;
-				string? aiAnalysis = null;
-
-				if (!string.IsNullOrWhiteSpace(sr.AIVerificationResult))
-				{
-					try
-					{
-						var json = System.Text.Json.JsonDocument.Parse(sr.AIVerificationResult);
-						aiSimilar = json.RootElement.GetProperty("isSimilar").GetBoolean();
-						aiScore = json.RootElement.GetProperty("confidence_score").GetDecimal();
-						aiSummary = json.RootElement.GetProperty("summary").GetString();
-						aiAnalysis = json.RootElement.GetProperty("analysis").GetString();
-					}
-					catch { /* Ignore malformed JSON */ }
-				}
+				var (aiSimilar, aiScore, aiSummary, aiAnalysis) =
+					ParseAIVerification(sr.AIVerificationResult);
 
 				list.Add(new VerificationResponse
 				{
@@ -458,20 +443,57 @@ namespace BLL.Service
 					VerificationStatus = sr.VerificationStatus,
 					VerificationStatusText = sr.VerificationStatus.ToString(),
 
+					// AI
 					AIVerifiedSimilar = aiSimilar,
 					AIConfidenceScore = aiScore,
-					AISummary = aiSummary,
-					AIAnalysis = aiAnalysis,
+					AISummary = aiSummary ?? "",
+					AIAnalysis = aiAnalysis ?? "",
 					AIVerifiedAt = sr.AIVerifiedAt,
 
+					// Teacher
 					TeacherVerifiedSimilar = sr.VerificationStatus == VerificationStatus.TeacherConfirmed_Similar,
-					TeacherUsername = sr.TeacherVerifiedByUser?.Username,
-					TeacherNotes = sr.TeacherNotes,
+					TeacherUsername = sr.TeacherVerifiedByUser?.Username ?? "",
+					TeacherNotes = sr.TeacherNotes ?? "",
 					TeacherVerifiedAt = sr.TeacherVerifiedAt
 				});
 			}
 
 			return list;
+		}
+
+		private (bool? IsSimilar, decimal? Confidence, string? Summary, string? Analysis) ParseAIVerification(string? jsonString)
+		{
+			if (string.IsNullOrWhiteSpace(jsonString))
+				return (null, null, null, null);
+
+			try
+			{
+				var doc = System.Text.Json.JsonDocument.Parse(jsonString);
+				var root = doc.RootElement;
+
+				bool? isSimilar = root.TryGetProperty("isSimilar", out var p1)
+					? p1.GetBoolean()
+					: null;
+
+				decimal? confidence = root.TryGetProperty("confidenceScore", out var p2)
+					? p2.GetDecimal()
+					: null;
+
+				string? summary = root.TryGetProperty("summary", out var p3)
+					? p3.GetString()
+					: null;
+
+				string? analysis = root.TryGetProperty("analysis", out var p4)
+					? p4.GetString()
+					: null;
+
+				return (isSimilar, confidence, summary, analysis);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "Failed to parse AIVerificationResult JSON.");
+				return (null, null, null, null);
+			}
 		}
 	}
 

@@ -23,6 +23,13 @@ using BLL.Model.Response.Rubric;
 using Amazon.Runtime.Telemetry.Tracing;
 using Grpc.Core;
 using BLL.Model.Request.Grade;
+using BLL.Model.Response.Grade;
+using Amazon;
+using Amazon.S3;
+using Model.Configuration;
+using Microsoft.Extensions.Configuration;
+using Amazon.S3.Model;
+using OfficeOpenXml;
 
 namespace BLL.Service
 {
@@ -31,16 +38,23 @@ namespace BLL.Service
 		private readonly IUnitOfWork _unitOfWork;
 		private readonly IMapper _mapper;
 		private readonly IGradeService _gradeService;
-		public ExamService(IUnitOfWork unitOfWork, IMapper mapper, IGradeService gradeService)
+		private readonly IS3Service _s3Service;
+		private readonly IAmazonS3 _s3Client;
+		private readonly AwsConfiguration _awsConfig;
+		public ExamService(IUnitOfWork unitOfWork, IMapper mapper, IGradeService gradeService, IS3Service s3Service, IAmazonS3 s3Client, IConfiguration configuration)
 		{
 			_unitOfWork = unitOfWork;
 			_mapper = mapper;
 			_gradeService = gradeService;
+			_s3Service = s3Service;
+			_s3Client = s3Client;
+			_awsConfig = new AwsConfiguration();
+			configuration.GetSection("AWS").Bind(_awsConfig);
 		}
 
 		public async Task<ExamResponse> CreateExam(CreateExamRequest request)
-		{		
-			bool isDuplicatedCode =  await _unitOfWork.ExamRepository.GetByExamCodeAsync(request.ExamCode) == null ? false : true;
+		{
+			bool isDuplicatedCode = await _unitOfWork.ExamRepository.GetByExamCodeAsync(request.ExamCode) == null ? false : true;
 			if (isDuplicatedCode)
 				throw new AppException("Duplicated exam code", 400);
 			Exam exam = _mapper.Map<Exam>(request);
@@ -92,8 +106,20 @@ namespace BLL.Service
 
 		public async Task ParseDetailExcel(long examId, IFormFile file)
 		{
-			using var stream = file.OpenReadStream();
-			using var doc = SpreadsheetDocument.Open(stream, false);
+			// 0. Lấy exam để có examCode
+			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(examId);
+			if (exam == null)
+			{
+				throw new Exception("Exam not found");
+			}
+			var examCode = exam.ExamCode; // sửa theo property thực tế
+										  // 1. Copy file vào MemoryStream
+			using var ms = new MemoryStream();
+			await file.CopyToAsync(ms);
+
+			// 2. Đặt Position về 0 để đọc Excel
+			ms.Position = 0;
+			using var doc = SpreadsheetDocument.Open(ms, false);
 
 			var wb = doc.WorkbookPart!;
 			var sheet = wb.Workbook.Sheets!.GetFirstChild<Sheet>()!;
@@ -225,7 +251,15 @@ namespace BLL.Service
 				}
 
 			}
+			ms.Position = 0; // RẤT QUAN TRỌNG: reset về đầu trước khi upload
 
+			var s3Path = $"{examCode}/original-file"; // examCode/original-file
+			var originalFileUrl = await _s3Service.UploadExcelFileAsync(ms, file.FileName, s3Path);
+
+			// Nếu muốn lưu URL lại trong bảng Exam:
+			exam.OriginalExcel = originalFileUrl;
+
+			// (exam đang được tracking bởi DbContext, chỉ cần gán là đủ)
 			//--------------------------------------------------------------------
 			// 3) SAVE ALL → chỉ SaveChanges 1 lần cho hiệu suất
 			//--------------------------------------------------------------------
@@ -235,7 +269,7 @@ namespace BLL.Service
 				await _unitOfWork.StudentRepository.AddRangeAsync(students);
 				saved = true;
 			}
-				
+
 			if (examStudents.Count > 0)
 			{
 				await _unitOfWork.ExamStudentRepository.AddRangeAsync(examStudents);
@@ -246,12 +280,12 @@ namespace BLL.Service
 				await _unitOfWork.ExamQuestionRepository.AddRangeAsync(questions);
 				saved = true;
 			}
-				
+
 			if (rubrics.Count > 0)
 			{
 				await _unitOfWork.RubricRepository.AddRangeAsync(rubrics);
 				saved = true;
-			}	
+			}
 
 			if (saved)
 			{
@@ -259,7 +293,7 @@ namespace BLL.Service
 				if (examStudents.Count > 0)
 					await CreateGradeForExamStudent(examId, examStudents);
 			}
-				
+
 		}
 
 		private async Task<User> GetOrCreateTeacherAsync(string teacherCode)
@@ -368,8 +402,8 @@ namespace BLL.Service
 			{
 				requests.Add(new AddGradeRangeRequest
 				{
-					ExamStudentId = student.Id, 
-					TotalScore = 0,        
+					ExamStudentId = student.Id,
+					TotalScore = 0,
 					Comment = "",
 					GradedAt = DateTime.UtcNow,
 					GradedBy = null,
@@ -381,5 +415,239 @@ namespace BLL.Service
 			await _gradeService.CreateRange(examId, requests);
 		}
 
+		public async Task<GradeExportResponse> ExportGradeExcel(int userId, long id)
+		{
+			// 1. Tải file từ S3
+			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(id);
+			if (exam == null)
+				throw new AppException("Exam not found", 404);
+
+			var key = GetS3KeyFromUrl(exam.OriginalExcel);
+			var original = await DownloadFromS3Async(key);
+
+			// 2. Clone stream để OpenXML ghi lên
+			var ms = new MemoryStream();
+			original.CopyTo(ms);
+			ms.Position = 0;
+
+			// IMPORTANT: AutoSave = true
+			var settings = new OpenSettings { AutoSave = true };
+
+			using (var doc = SpreadsheetDocument.Open(ms, true, settings))
+			{
+				var wb = doc.WorkbookPart!;
+				var sheet = wb.Workbook.Sheets
+					.Cast<Sheet>()
+					.First(s => s.Name!.Value.Contains("Marking"));
+
+				var wsPart = (WorksheetPart)wb.GetPartById(sheet.Id!);
+				var ws = wsPart.Worksheet;
+				var rows = ws.GetFirstChild<SheetData>()!.Elements<Row>().ToList();
+
+				Console.WriteLine("[DEBUG] Active sheet = " + sheet.Name);
+
+				//---------------------------------------------------------
+				// 3. Mapping rubric
+				//---------------------------------------------------------
+				int colD = 3, colL = 11, colTotal = 12;
+				Row rubricRow = rows[1];
+				var rubricCells = rubricRow.Elements<Cell>().ToList();
+				var rubricMap = new Dictionary<string, int>();
+
+				for (int col = colD; col <= colL; col++)
+				{
+					var name = GetCellValue(doc, rubricCells[col]);
+					Console.WriteLine($"[DEBUG] Rubric '{name}' at col {col}");
+					if (!string.IsNullOrWhiteSpace(name))
+						rubricMap[name.Trim()] = col;
+				}
+
+				//---------------------------------------------------------
+				// 4. Load student scores
+				//---------------------------------------------------------
+				var examStudents = await _unitOfWork.ExamStudentRepository.GetExamStudentByExamId(id);
+
+				int rowStart = 3;
+
+				Console.WriteLine($"[DEBUG] Excel Students = {rows.Count - rowStart}");
+				Console.WriteLine($"[DEBUG] DB Students = {examStudents.Count}");
+
+				//---------------------------------------------------------
+				// 5. Xóa merge cells nếu có
+				//---------------------------------------------------------
+				var merge = ws.Elements<MergeCells>().FirstOrDefault();
+				if (merge != null)
+				{
+					Console.WriteLine("[DEBUG] Removing merge cells...");
+					merge.Remove();
+				}
+
+				//---------------------------------------------------------
+				// 6. Fill data vào Excel
+				//---------------------------------------------------------
+				for (int i = 0; i < examStudents.Count; i++)
+				{
+					var stud = examStudents[i];
+					var grade = stud.Grades.FirstOrDefault();
+					if (grade == null) continue;
+
+					var row = rows[rowStart + i];
+
+					Console.WriteLine($"[DEBUG] ---- Filling: {stud.Student.StudentCode} ----");
+
+					foreach (var detail in grade.Details)
+					{
+						string cri = detail.Rubric.Criterion.Trim();
+						decimal score = detail.Score;
+
+						if (!rubricMap.TryGetValue(cri, out int col)) continue;
+
+						var cell = GetOrCreateCell(wsPart, row, col);
+						cell.CellFormula = null;
+						cell.CellValue = new CellValue(score.ToString());
+						cell.DataType = CellValues.Number;
+
+						Console.WriteLine($"[DEBUG] Fill {cri} = {score}");
+					}
+
+					// TOTAL
+					decimal total = grade.Details.Sum(x => x.Score);
+					var totalCell = GetOrCreateCell(wsPart, row, colTotal);
+					totalCell.CellFormula = null;
+					totalCell.CellValue = new CellValue(total.ToString());
+					totalCell.DataType = CellValues.Number;
+				}
+
+				// Save worksheet
+				ws.Save();
+				wb.Workbook.Save();
+
+				// Dispose() sẽ flush toàn bộ xuống stream ms
+			}
+
+			//---------------------------------------------------------
+			// 7. Upload S3
+			//---------------------------------------------------------
+			ms.Position = 0;
+
+			string fileName = $"GradeExport_{id}_{DateTime.Now.Ticks}.xlsx";
+			string uploadPath = $"{exam.ExamCode}/grade-export";
+
+			string url = await _s3Service.UploadExcelFileAsync(ms, fileName, uploadPath);
+
+			Console.WriteLine("[DEBUG] Uploaded = " + url);
+
+			// 8. Ghi vào DB
+			var export = new GradeExport
+			{
+				ExamId = id,
+				UserId = userId,
+				Url = url,
+				CreatedAt = DateTime.UtcNow
+			};
+
+			await _unitOfWork.GradeExportRepository.AddAsync(export);
+			await _unitOfWork.SaveChangesAsync();
+
+			return new GradeExportResponse { Url = url };
+		}
+
+		private Cell GetOrCreateCell(WorksheetPart wsPart, Row row, int colIndex)
+		{
+			string columnName = GetColumnName(colIndex);
+			string cellReference = columnName + row.RowIndex;
+
+			Cell? cell = row.Elements<Cell>()
+						   .FirstOrDefault(c => c.CellReference?.Value == cellReference);
+
+			if (cell == null)
+			{
+				cell = new Cell { CellReference = cellReference };
+
+				Cell? refCell = null;
+				foreach (Cell c in row.Elements<Cell>())
+				{
+					if (string.Compare(c.CellReference.Value, cellReference, true) > 0)
+					{
+						refCell = c;
+						break;
+					}
+				}
+
+				row.InsertBefore(cell, refCell);
+			}
+
+			return cell;
+		}
+
+		private string GetColumnName(int index)
+		{
+			int dividend = index + 1;
+			string columnName = "";
+
+			while (dividend > 0)
+			{
+				int modulo = (dividend - 1) % 26;
+				columnName = Convert.ToChar(65 + modulo) + columnName;
+				dividend = (dividend - modulo) / 26;
+			}
+
+			return columnName;
+		}
+
+
+		private string GetS3KeyFromUrl(string url)
+		{
+			var uri = new Uri(url);
+
+			// AbsolutePath => trả về decode nhưng dấu + vẫn giữ nguyên
+			var path = Uri.UnescapeDataString(uri.AbsolutePath);
+
+			// Trong S3, folder/file name chứa space phải là " " không phải "+"
+			path = path.Replace("+", " ");
+
+			return path.TrimStart('/');
+		}
+
+		private async Task<MemoryStream> DownloadFromS3Async(string key)
+		{
+			var request = new GetObjectRequest
+			{
+				BucketName = _awsConfig.BucketName,
+				Key = key
+			};
+
+			var response = await _s3Client.GetObjectAsync(request);
+
+			var ms = new MemoryStream();
+			await response.ResponseStream.CopyToAsync(ms);
+			ms.Position = 0;
+
+			return ms;
+		}
+
+		private MemoryStream CloneStream(Stream original)
+		{
+			var clone = new MemoryStream();
+			original.Position = 0;
+			original.CopyTo(clone);
+			clone.Position = 0;
+			original.Position = 0;
+			return clone;
+		}
+
+		public MemoryStream ConvertXmlExcelToXlsx(Stream xmlFile)
+		{
+			// Set license for EPPlus 8.x
+			ExcelPackage.License.SetNonCommercialPersonal("MyProject");
+
+			using var package = new ExcelPackage(xmlFile);
+
+			var ms = new MemoryStream();
+			package.SaveAs(ms);
+			ms.Position = 0;
+
+			return ms;
+		}
 	}
 }

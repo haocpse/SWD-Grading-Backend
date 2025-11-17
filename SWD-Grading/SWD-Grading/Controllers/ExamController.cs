@@ -2,6 +2,7 @@
 using BLL.Model.Request.Exam;
 using BLL.Model.Response;
 using BLL.Model.Response.Exam;
+using BLL.Model.Response.Grade;
 using BLL.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -106,27 +107,39 @@ namespace SWD_Grading.Controllers
 				return BadRequest("No file uploaded.");
 
 			var tempFilePath = Path.GetTempFileName();
-			using (var stream = new FileStream(tempFilePath, FileMode.Create))
-			{
-				await file.CopyToAsync(stream);
-			}
 
-			string rawText;
 			try
 			{
-				rawText = await _ocrService.ExtractText(id, tempFilePath, file, "eng");
+				using (var stream = new FileStream(tempFilePath, FileMode.Create))
+				{
+					await file.CopyToAsync(stream);
+				}
+
+				string rawText = await _ocrService.ExtractText(id, tempFilePath, file, "eng");
+
+				return Ok(new
+				{
+					code = 200,
+					message = "OCR completed successfully",
+					problemStatement = rawText
+				});
+			}
+			catch (Exception ex)
+			{
+				// Log lỗi
+				Console.WriteLine("OCR ERROR: " + ex);
+
+				return StatusCode(500, new
+				{
+					code = 500,
+					message = "Internal Server Error",
+					detail = ex.Message
+				});
 			}
 			finally
 			{
 				System.IO.File.Delete(tempFilePath);
 			}
-			Console.WriteLine(rawText);
-			return Ok(new
-			{
-				code = 200,
-				message = "OCR completed successfully",
-				problemStatement = rawText
-			});
 		}
 
 		[HttpPost("{id}/details")]
@@ -173,5 +186,19 @@ namespace SWD_Grading.Controllers
 			return Ok(response);
 		}
 
+		[HttpPost("{id}/export-excel")]
+		public async Task<IActionResult> ExportGradeExcel([FromRoute] long id)
+		{
+			int userId = User.GetUserId();
+			var result = await _examService.ExportGradeExcel(userId, id);
+			BaseResponse<GradeExportResponse> response = new()
+			{
+				Code = 200,
+				Message = "Get exam questions successfully",
+				Data = result
+			};
+
+			return Ok(response);
+		}
 	}
 }

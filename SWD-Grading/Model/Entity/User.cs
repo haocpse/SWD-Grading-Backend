@@ -15,5 +15,6 @@ namespace Model.Entity
 		public string PasswordHash { get; set; }
 		public bool IsActive { get; set; }
 		public UserRole Role { get; set; }
+		public List<GradeExport> GradeExports { get; set; }
 	}
 }

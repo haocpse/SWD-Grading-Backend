@@ -21,7 +21,7 @@ namespace DAL.Interface
 		IDocFileRepository DocFileRepository { get; }
 		ISimilarityCheckRepository SimilarityCheckRepository { get; }
 		ISimilarityResultRepository SimilarityResultRepository { get; }
-
+		IGradeExportRepository GradeExportRepository { get; }
 		IExamQuestionRepository ExamQuestionRepository { get; }
 		IRubricRepository RubricRepository { get; }
 		IGradeDetailRepository GradeDetailRepository { get; }

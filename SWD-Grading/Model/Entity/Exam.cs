@@ -26,10 +26,13 @@ namespace Model.Entity
 
 		public string? ExamPaper { get; set; }
 
+		public string? OriginalExcel { get; set; }
+
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
 		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
 		public List<ExamQuestion> Questions { get; set; }
+		public List<GradeExport> GradeExports { get; set; }
 	}
 }

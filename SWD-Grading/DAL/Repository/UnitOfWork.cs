@@ -191,5 +191,19 @@ namespace DAL.Repository
 				return _gradeRepository;
 			}
 		}
+
+		private IGradeExportRepository _gradeExportRepository;
+		public IGradeExportRepository GradeExportRepository
+		{
+			get
+			{
+				if (_gradeExportRepository == null)
+				{
+					_gradeExportRepository = new GradeExportRepository(_context);
+				}
+				return _gradeExportRepository;
+			}
+		}
+
 	}
 }

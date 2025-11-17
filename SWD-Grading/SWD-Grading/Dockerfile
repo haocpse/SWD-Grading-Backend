@@ -2,6 +2,19 @@
 WORKDIR /app
 EXPOSE 8080
 
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+
+# Install Tesseract OCR and Leptonica
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    libleptonica-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy english data (nếu cần)
+RUN apt-get install -y tesseract-ocr-eng
+
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src

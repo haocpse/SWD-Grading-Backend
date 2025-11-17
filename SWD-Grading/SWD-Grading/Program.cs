@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using OfficeOpenXml;
 using System.Text;
 
 namespace SWD_Grading
@@ -190,6 +191,7 @@ namespace SWD_Grading
 			builder.Services.AddAutoMapper(typeof(RubricProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(GradeProfile).Assembly);
 			builder.Services.AddAutoMapper(typeof(GradeDetailProfile).Assembly);
+
 			var app = builder.Build();
 
 			// Configure the HTTP request pipeline.

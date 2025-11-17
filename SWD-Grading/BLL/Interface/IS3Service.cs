@@ -32,6 +32,7 @@ namespace BLL.Interface
 	Task<Stream> GetFileAsync(string path);
 
 	Task<string> UploadImageAsync(Stream fileStream, string fileName, string path);
+	Task<string> UploadExcelFileAsync(Stream fileStream, string fileName, string path);
 
 	/// <summary>
 	/// Generate a presigned URL for temporary access to a file
