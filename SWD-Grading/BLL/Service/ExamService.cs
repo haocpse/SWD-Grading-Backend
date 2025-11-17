@@ -435,12 +435,12 @@ namespace BLL.Service
 
 			using (var doc = SpreadsheetDocument.Open(ms, true, settings))
 			{
-				var wb = doc.WorkbookPart!;
-				var sheet = wb.Workbook.Sheets
+				var wbPart = doc.WorkbookPart!;
+				var sheet = wbPart.Workbook.Sheets
 					.Cast<Sheet>()
 					.First(s => s.Name!.Value.Contains("Marking"));
 
-				var wsPart = (WorksheetPart)wb.GetPartById(sheet.Id!);
+				var wsPart = (WorksheetPart)wbPart.GetPartById(sheet.Id!);
 				var ws = wsPart.Worksheet;
 				var rows = ws.GetFirstChild<SheetData>()!.Elements<Row>().ToList();
 
@@ -511,16 +511,24 @@ namespace BLL.Service
 					}
 
 					// TOTAL
-					decimal total = grade.Details.Sum(x => x.Score);
-					var totalCell = GetOrCreateCell(wsPart, row, colTotal);
-					totalCell.CellFormula = null;
-					totalCell.CellValue = new CellValue(total.ToString());
-					totalCell.DataType = CellValues.Number;
+					//decimal total = grade.Details.Sum(x => x.Score);
+					//var totalCell = GetOrCreateCell(wsPart, row, colTotal);
+					//totalCell.CellFormula = null;
+					//totalCell.CellValue = new CellValue(total.ToString());
+					//totalCell.DataType = CellValues.Number;
 				}
 
-				// Save worksheet
+				// Remove calcChain if exists
+				var calcChainPart = wbPart.GetPartsOfType<CalculationChainPart>().FirstOrDefault();
+				if (calcChainPart != null)
+				{
+					Console.WriteLine("[DEBUG] Removing calcChain.xml");
+					wbPart.DeletePart(calcChainPart);
+				}
+
+				// Save
 				ws.Save();
-				wb.Workbook.Save();
+				wbPart.Workbook.Save();
 
 				// Dispose() sẽ flush toàn bộ xuống stream ms
 			}
