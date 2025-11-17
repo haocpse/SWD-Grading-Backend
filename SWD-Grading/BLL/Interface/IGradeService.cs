@@ -14,7 +14,7 @@ namespace BLL.Interface
     {
         Task<PagingResponse<GradeResponse>> GetAll(PagedRequest request);
         Task<GradeDetailResponse> GetById(long id);
-        public async Task<long> Create(long examStudentId);
+        Task<long> Create(long examStudentId);
         Task Update(GradeRequest request, long id);
         Task Delete(long id);
         Task<PagingResponse<GradeResponse>> GetAllByExamStudentId(long examStudentId, PagedRequest request);
