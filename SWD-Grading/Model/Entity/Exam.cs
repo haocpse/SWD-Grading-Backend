@@ -33,6 +33,7 @@ namespace Model.Entity
 		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
 		public List<ExamQuestion> Questions { get; set; }
+		public List<ExamStudent> ExamStudents { get; set; }
 		public List<GradeExport> GradeExports { get; set; }
 	}
 }

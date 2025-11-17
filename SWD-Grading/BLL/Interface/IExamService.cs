@@ -3,6 +3,7 @@ using BLL.Model.Response;
 using BLL.Model.Response.Exam;
 using BLL.Model.Response.Grade;
 using Microsoft.AspNetCore.Http;
+using Model.Entity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,5 +22,6 @@ namespace BLL.Interface
         Task ParseDetailExcel(long id, IFormFile file);
         Task<ExamResponse?> GetQuestionByExamId(long id);
         Task<GradeExportResponse> ExportGradeExcel(int userId, long id);
+		Task<PagingResponse<ExamResponse>> GetAssignedExam(ExamFilter filter, int userId);
 	}
 }
