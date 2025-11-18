@@ -125,15 +125,17 @@ namespace BLL.Service
             {
                 foreach (var rubric in question.Rubrics)
                 {
-                    gradeDetails.Add(new GradeDetail
-                    {
-                        Grade = newGrade,
-                        Rubric = rubric
-                    });
+					gradeDetails.Add(new GradeDetail
+					{
+						GradeId = newGrade.Id,
+						Grade = newGrade,
+						Rubric = rubric,
+					});
                 }
             }
 
             await _unitOfWork.GradeDetailRepository.AddRangeAsync(gradeDetails);
+			await _unitOfWork.SaveChangesAsync();
             return newGrade.Id;
 		}
 
