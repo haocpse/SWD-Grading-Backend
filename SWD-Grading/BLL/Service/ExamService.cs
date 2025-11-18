@@ -462,14 +462,16 @@ namespace BLL.Service
 				//---------------------------------------------------------
 				// 4. Load student scores
 				//---------------------------------------------------------
-				var examStudents = await _unitOfWork.ExamStudentRepository.GetExamStudentByExamId(id);
+				var examStudents = await _unitOfWork.ExamStudentRepository.GetExamStudentByExamId(userId, id);
 				int rowStart = 3;
 
+				var currentTeacherCode = examStudents[0].Teacher.TeacherCode;
+				HideOtherTeacherRows(doc, wsPart, currentTeacherCode);
+
+				rows = ws.GetFirstChild<SheetData>()!.Elements<Row>().ToList();
 				//---------------------------------------------------------
 				// 5. Xóa merge cells (nếu tồn tại)
 				//---------------------------------------------------------
-				var merge = ws.Elements<MergeCells>().FirstOrDefault();
-				if (merge != null) merge.Remove();
 
 				//---------------------------------------------------------
 				// 6. Fill scores — GIỮ CÔNG THỨC
@@ -478,6 +480,7 @@ namespace BLL.Service
 				{
 					var stud = examStudents[i];
 					var grade = stud.Grades
+						.Where(g => g.Status == GradeStatus.GRADED)
 						.OrderByDescending(g => g.Attempt)
 						.FirstOrDefault();
 					if (grade == null) continue;
@@ -505,7 +508,6 @@ namespace BLL.Service
 						cell.DataType = CellValues.Number;
 					}
 				}
-
 				// ❗ BẢO TOÀN CÔNG THỨC → KHÔNG XOÁ calcChain
 				// KHÔNG ĐỤNG TỚI calcChain.xml
 				var calcProps = wbPart.Workbook.CalculationProperties;
@@ -573,6 +575,25 @@ namespace BLL.Service
 			}
 
 			return null;
+		}
+
+		private void HideOtherTeacherRows(SpreadsheetDocument doc, WorksheetPart wsPart, string teacherCode)
+		{
+			var sheetData = wsPart.Worksheet.GetFirstChild<SheetData>();
+			var rows = sheetData.Elements<Row>().ToList();
+
+			int markerColIndex = 2; // Column C
+
+			foreach (var row in rows.Where(r => r.RowIndex >= 3))
+			{
+				var markerCell = GetOrCreateCell(wsPart, row, markerColIndex);
+				string markerValue = GetCellValue(doc, markerCell)?.Trim() ?? "";
+
+				if (!markerValue.Equals(teacherCode.Trim(), StringComparison.OrdinalIgnoreCase))
+				{
+					row.Hidden = true;    // ⭐ Chỉ ẩn, không xóa
+				}
+			}
 		}
 
 		private Cell GetOrCreateCell(WorksheetPart wsPart, Row row, int colIndex)
