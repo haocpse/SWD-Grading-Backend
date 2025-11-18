@@ -482,7 +482,8 @@ namespace BLL.Service
 						.FirstOrDefault();
 					if (grade == null) continue;
 
-					var row = rows[rowStart + i];
+					var row = FindRowByStudentCode(doc, wsPart, rows, stud.Student.StudentCode);
+					if (row == null) continue;
 
 					foreach (var detail in grade.Details)
 					{
@@ -553,6 +554,25 @@ namespace BLL.Service
 			await _unitOfWork.SaveChangesAsync();
 
 			return new GradeExportResponse { Url = url };
+		}
+
+		private Row? FindRowByStudentCode(SpreadsheetDocument doc, WorksheetPart wsPart, List<Row> rows, string studentCode)
+		{
+			int studentColIndex = 1; // B column
+
+			foreach (var row in rows)
+			{
+				var cell = GetOrCreateCell(wsPart, row, studentColIndex);
+				string value = GetCellValue(doc, cell);
+
+				if (!string.IsNullOrWhiteSpace(value) &&
+					value.Trim().Equals(studentCode.Trim(), StringComparison.OrdinalIgnoreCase))
+				{
+					return row;
+				}
+			}
+
+			return null;
 		}
 
 		private Cell GetOrCreateCell(WorksheetPart wsPart, Row row, int colIndex)
