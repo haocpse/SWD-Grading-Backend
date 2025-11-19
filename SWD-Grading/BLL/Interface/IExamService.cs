@@ -23,5 +23,6 @@ namespace BLL.Interface
         Task<ExamResponse?> GetQuestionByExamId(long id);
         Task<GradeExportResponse> ExportGradeExcel(int userId, long id);
 		Task<PagingResponse<ExamResponse>> GetAssignedExam(ExamFilter filter, int userId);
+        Task<List<GradeExportResponse>> GetGradeHistory(long id);
 	}
 }

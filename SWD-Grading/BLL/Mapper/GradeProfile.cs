@@ -28,6 +28,11 @@ namespace BLL.Mapper
             CreateMap<GradeDetail, GradeDetailModel>();
             CreateMap<GradeUpdateRequest, Grade>();
             CreateMap<AddGradeRangeRequest, Grade>();
+
+            CreateMap<GradeExport, GradeExportResponse>()
+                .ForMember(dest => dest.TeacherCode,
+                    opt => opt.MapFrom(src => src.Teacher.TeacherCode));
+
         }
     }
 }

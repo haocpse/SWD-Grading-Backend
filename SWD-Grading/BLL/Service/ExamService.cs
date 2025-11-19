@@ -422,7 +422,8 @@ namespace BLL.Service
 			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(id);
 			if (exam == null)
 				throw new AppException("Exam not found", 404);
-
+			if (exam.OriginalExcel == null)
+				throw new AppException("You have not imported file", 400);
 			var key = GetS3KeyFromUrl(exam.OriginalExcel);
 			var original = await DownloadFromS3Async(key);
 
@@ -732,6 +733,12 @@ namespace BLL.Service
 				TotalItems = totalItems,
 				TotalPages = (int)Math.Ceiling(totalItems / (double)filter.Size)
 			};
+		}
+
+		public async Task<List<GradeExportResponse>> GetGradeHistory(long id)
+		{
+			var responses = await _unitOfWork.GradeExportRepository.GetGradeExportByExamId(id);
+			return _mapper.Map<List<GradeExportResponse>>(responses);
 		}
 	}
 }

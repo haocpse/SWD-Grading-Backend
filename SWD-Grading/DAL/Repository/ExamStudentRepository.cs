@@ -80,7 +80,7 @@ namespace DAL.Repository
 				.Include(es => es.Grades)
 					.ThenInclude(g => g.Details)
 						.ThenInclude(d => d.Rubric)
-				.Where(es => es.TeacherId == teacherId && es.ExamId == examId
+				.Where(es => es.Status != ExamStudentStatus.NOT_FOUND && es.TeacherId == teacherId && es.ExamId == examId
 							 && es.Grades.Any(g => g.Status.Equals(GradeStatus.GRADED)))
 				.ToListAsync();
 		}

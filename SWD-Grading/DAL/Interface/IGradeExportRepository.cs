@@ -10,5 +10,8 @@ namespace DAL.Interface
 {
 	public interface IGradeExportRepository : IGenericRepository<GradeExport, long>
 	{
+
+		Task<List<GradeExport>> GetGradeExportByExamId(long examId);
+
 	}
 }

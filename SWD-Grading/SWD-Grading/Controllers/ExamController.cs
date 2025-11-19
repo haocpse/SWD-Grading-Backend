@@ -200,5 +200,19 @@ namespace SWD_Grading.Controllers
 
 			return Ok(response);
 		}
+
+		[HttpPost("{id}/grade-excel")]
+		public async Task<IActionResult> GradeExcelHistory([FromRoute] long id)
+		{
+			var result = await _examService.GetGradeHistory(id);
+			BaseResponse<List<GradeExportResponse>> response = new()
+			{
+				Code = 200,
+				Message = "Get exam questions successfully",
+				Data = result
+			};
+
+			return Ok(response);
+		}
 	}
 }
