@@ -15,9 +15,5 @@ namespace BLL.Model.Request.Grade
         public long ExamStudentId { get; set; }
         public decimal TotalScore { get; set; }
         public string? Comment { get; set; } 
-        public DateTime? GradedAt { get; set; } = DateTime.UtcNow;
-        public string? GradedBy { get; set; }
-        public int Attempt { get; set; }
-        public GradeStatus Status { get; set; }
     }
 }

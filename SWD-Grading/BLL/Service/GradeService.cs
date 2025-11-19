@@ -92,7 +92,7 @@ namespace BLL.Service
 
 
 
-		public async Task<long> Create(GradeCreateRequest request)
+		public async Task<long> Create(GradeCreateRequest request, string teachercode)
 		{
 			var newGrade = new Grade
 			{
@@ -100,7 +100,7 @@ namespace BLL.Service
 				TotalScore = 0,
 				Comment = "",
 				GradedAt = DateTime.UtcNow,
-				GradedBy = null,
+				GradedBy = teachercode,
 				Status = GradeStatus.CREATED
 			};
             var existingGrades = await _unitOfWork.GradeRepository.GetByExamStudentId(request.ExamStudentId);
@@ -184,7 +184,9 @@ namespace BLL.Service
 				throw new KeyNotFoundException("Grade not found");
 			}
 			_mapper.Map(request, existingGrade);
-			await _unitOfWork.GradeRepository.UpdateAsync(existingGrade);
+			existingGrade.GradedAt = DateTime.UtcNow;
+			existingGrade.Status = GradeStatus.GRADED;
+            await _unitOfWork.GradeRepository.UpdateAsync(existingGrade);
 			await _unitOfWork.SaveChangesAsync();
 		}
 
