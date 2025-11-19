@@ -4,6 +4,7 @@ using BLL.Model.Response;
 using BLL.Model.Response.Exam;
 using BLL.Model.Response.Grade;
 using BLL.Service;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Model.Request;
@@ -187,6 +188,7 @@ namespace SWD_Grading.Controllers
 		}
 
 		[HttpPost("{id}/export-excel")]
+		[Authorize]
 		public async Task<IActionResult> ExportGradeExcel([FromRoute] long id)
 		{
 			int userId = User.GetUserId();
