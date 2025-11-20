@@ -223,7 +223,15 @@ namespace SWD_Grading.Controllers
 		[HttpGet("{id}/grade-excel")]
 		public async Task<IActionResult> GradeExcelHistory([FromRoute] long id)
 		{
-			var result = await _examService.GetGradeHistory(id);
+			var userRole = User.GetUserRole();
+			var result = new List<GradeExportResponse>();
+			if (userRole.Equals(UserRole.EXAMINATION))
+				result = await _examService.GetGradeHistory(id);
+			else
+			{
+				var userId = User.GetUserId();
+				result = await _examService.GetMyGradeHistory(userId, id);
+			}
 			BaseResponse<List<GradeExportResponse>> response = new()
 			{
 				Code = 200,

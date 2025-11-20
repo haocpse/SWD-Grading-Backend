@@ -12,6 +12,6 @@ namespace DAL.Interface
 	{
 
 		Task<List<GradeExport>> GetGradeExportByExamId(long examId);
-
+		Task<List<GradeExport>> GetGradeExportByTeacherIdAndExamId(int teacherId, long examId);
 	}
 }

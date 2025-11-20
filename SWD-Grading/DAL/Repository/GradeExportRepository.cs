@@ -25,5 +25,13 @@ namespace DAL.Repository
 				.Where(ge => ge.ExamId == examId)
 				.ToListAsync();
 		}
+
+		public async Task<List<GradeExport>> GetGradeExportByTeacherIdAndExamId(int teacherId, long examId)
+		{
+			return await _context.GradeExports
+				.Include(ge => ge.Teacher)
+				.Where(ge => ge.ExamId == examId && ge.UserId == teacherId)
+				.ToListAsync();
+		}
 	}
 }

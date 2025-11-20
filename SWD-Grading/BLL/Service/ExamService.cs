@@ -834,5 +834,11 @@ namespace BLL.Service
 			var responses = await _unitOfWork.GradeExportRepository.GetGradeExportByExamId(id);
 			return _mapper.Map<List<GradeExportResponse>>(responses);
 		}
+
+		public async Task<List<GradeExportResponse>> GetMyGradeHistory(int teacherId, long id)
+		{
+			var responses = await _unitOfWork.GradeExportRepository.GetGradeExportByTeacherIdAndExamId(teacherId, id);
+			return _mapper.Map<List<GradeExportResponse>>(responses);
+		}
 	}
 }
