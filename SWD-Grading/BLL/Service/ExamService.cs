@@ -416,8 +416,16 @@ namespace BLL.Service
 			await _gradeService.CreateRange(examId, requests);
 		}
 
-		public async Task<GradeExportResponse> ExportGradeExcel(int userId, long id)
+		public async Task<GradeExportResponse> ExportGradeExcel(int userId, UserRole role, long id)
 		{
+			if (userId <= 0)
+				throw new AppException("Invalid userId", 400);
+
+			if (!Enum.IsDefined(typeof(UserRole), role))
+				throw new AppException("Invalid user role", 400);
+
+			if (id <= 0)
+				throw new AppException("Invalid exam id", 400);
 			// 1. Load file template từ S3
 			var exam = await _unitOfWork.ExamRepository.GetByIdAsync(id);
 			if (exam == null)
@@ -425,11 +433,23 @@ namespace BLL.Service
 			if (exam.OriginalExcel == null)
 				throw new AppException("You have not imported file", 400);
 			var key = GetS3KeyFromUrl(exam.OriginalExcel);
+			if (string.IsNullOrWhiteSpace(key))
+				throw new AppException("Invalid S3 key extracted from OriginalExcel", 500);
 			var original = await DownloadFromS3Async(key);
-
+			if (original == null)
+				throw new AppException("Failed to download original Excel template", 500);
+			if (!original.CanRead)
+				throw new AppException("Downloaded file stream is unreadable", 500);
 			// Copy stream để chỉnh sửa bằng OpenXML
 			var ms = new MemoryStream();
-			original.CopyTo(ms);
+			try
+			{
+				original.CopyTo(ms);
+			}
+			catch
+			{
+				throw new AppException("Failed to copy Excel template stream", 500);
+			}
 			ms.Position = 0;
 
 			var settings = new OpenSettings { AutoSave = true };
@@ -437,20 +457,34 @@ namespace BLL.Service
 			using (var doc = SpreadsheetDocument.Open(ms, true, settings))
 			{
 				var wbPart = doc.WorkbookPart!;
+				if (wbPart == null)
+					throw new AppException("WorkbookPart is missing in Excel file", 500);
 				var sheet = wbPart.Workbook.Sheets
 					.Cast<Sheet>()
 					.First(s => s.Name!.Value.Contains("Marking"));
-
+				if (sheet == null)
+					throw new AppException("Sheet 'Marking' not found in Excel template", 400);
 				var wsPart = (WorksheetPart)wbPart.GetPartById(sheet.Id!);
+				if (wsPart == null)
+					throw new AppException("WorksheetPart not found for 'Marking' sheet", 500);
 				var ws = wsPart.Worksheet;
-				var rows = ws.GetFirstChild<SheetData>()!.Elements<Row>().ToList();
+				if (ws == null)
+					throw new AppException("Worksheet XML is missing", 500);
 
+				var sheetData = ws.GetFirstChild<SheetData>();
+				if (sheetData == null)
+					throw new AppException("SheetData not found in worksheet", 500);
+				var rows = sheetData.Elements<Row>().ToList();
+				if (rows.Count < 2)
+					throw new AppException("Template is missing required header rows", 400);
 				//---------------------------------------------------------
 				// 3. Mapping rubric row
 				//---------------------------------------------------------
 				int colD = 3, colL = 11;
 				Row rubricRow = rows[1];
 				var rubricCells = rubricRow.Elements<Cell>().ToList();
+				if (rubricCells.Count <= colL)
+					throw new AppException("Rubric row does not contain expected number of columns", 400);
 				var rubricMap = new Dictionary<string, int>();
 
 				for (int col = colD; col <= colL; col++)
@@ -463,31 +497,52 @@ namespace BLL.Service
 				//---------------------------------------------------------
 				// 4. Load student scores
 				//---------------------------------------------------------
-				var examStudents = await _unitOfWork.ExamStudentRepository.GetExamStudentByExamId(userId, id);
+				var examStudents = new List<ExamStudent>();
+				if (role.Equals(UserRole.TEACHER))
+					examStudents = await _unitOfWork.ExamStudentRepository.GetExamStudentByExamId(userId, id);
+				else
+					examStudents = await _unitOfWork.ExamStudentRepository.GetExamStudentByExamId(id);
+
+				if (examStudents == null)
+					throw new AppException("Failed to load exam students", 500);
+
+				if (examStudents.Count == 0)
+					throw new AppException("No students found for this exam", 404);
 				int rowStart = 3;
 
-				var currentTeacherCode = examStudents[0].Teacher.TeacherCode;
-				HideOtherTeacherRows(doc, wsPart, currentTeacherCode);
+				if (role.Equals(UserRole.TEACHER))
+				{
+					var first = examStudents[0];
+					if (first.Teacher == null)
+						throw new AppException("Missing teacher information", 500);
+
+					if (string.IsNullOrWhiteSpace(first.Teacher.TeacherCode))
+						throw new AppException("Teacher code is missing", 500);
+
+					HideOtherTeacherRows(doc, wsPart, first.Teacher.TeacherCode);
+				}
 
 				rows = ws.GetFirstChild<SheetData>()!.Elements<Row>().ToList();
-				//---------------------------------------------------------
-				// 5. Xóa merge cells (nếu tồn tại)
-				//---------------------------------------------------------
-
 				//---------------------------------------------------------
 				// 6. Fill scores — GIỮ CÔNG THỨC
 				//---------------------------------------------------------
 				for (int i = 0; i < examStudents.Count; i++)
 				{
 					var stud = examStudents[i];
+					if (stud.Student == null)
+						throw new AppException("Student data is missing", 500);
+					if (string.IsNullOrWhiteSpace(stud.Student.StudentCode))
+						throw new AppException("Student code is missing", 500);
 					var grade = stud.Grades
 						.Where(g => g.Status == GradeStatus.GRADED)
 						.OrderByDescending(g => g.Attempt)
 						.FirstOrDefault();
 					if (grade == null) continue;
-
+					if (grade.Details == null)
+						throw new AppException("Grade details missing for a graded student", 500);
 					var row = FindRowByStudentCode(doc, wsPart, rows, stud.Student.StudentCode);
-					if (row == null) continue;
+					if (row == null)
+						throw new AppException($"Row not found for student code {stud.Student.StudentCode}", 400);
 
 					foreach (var detail in grade.Details)
 					{
@@ -540,8 +595,17 @@ namespace BLL.Service
 			string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 			string fileName = $"GradeExport_[{exam.ExamCode}]_[{timestamp}].xlsx";
 			string uploadPath = $"{exam.ExamCode}/grade-export";
-			string url = await _s3Service.UploadExcelFileAsync(ms, fileName, uploadPath);
-
+			string url;
+			try
+			{
+				url = await _s3Service.UploadExcelFileAsync(ms, fileName, uploadPath);
+			}
+			catch
+			{
+				throw new AppException("Failed to upload exported file to S3", 500);
+			}
+			if (string.IsNullOrWhiteSpace(url))
+				throw new AppException("S3 did not return a valid URL", 500);
 			//---------------------------------------------------------
 			// 8. Lưu DB
 			//---------------------------------------------------------
@@ -553,8 +617,15 @@ namespace BLL.Service
 				CreatedAt = DateTime.UtcNow
 			};
 
-			await _unitOfWork.GradeExportRepository.AddAsync(export);
-			await _unitOfWork.SaveChangesAsync();
+			try
+			{
+				await _unitOfWork.GradeExportRepository.AddAsync(export);
+				await _unitOfWork.SaveChangesAsync();
+			}
+			catch
+			{
+				throw new AppException("Failed to save export history to database", 500);
+			}
 
 			return new GradeExportResponse { Url = url };
 		}

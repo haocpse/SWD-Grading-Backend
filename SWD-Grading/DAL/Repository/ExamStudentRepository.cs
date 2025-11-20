@@ -85,6 +85,20 @@ namespace DAL.Repository
 				.ToListAsync();
 		}
 
+		public async Task<List<ExamStudent>> GetExamStudentByExamId(long examId)
+		{
+			return await _context.ExamStudents
+				.Include(es => es.Student)
+				.Include(es => es.Teacher)
+				.Include(es => es.Grades)
+					.ThenInclude(g => g.Details)
+						.ThenInclude(d => d.Rubric)
+				.Where(es => es.Status != ExamStudentStatus.NOT_FOUND && es.ExamId == examId
+							 && es.Grades.Any(g => g.Status.Equals(GradeStatus.GRADED)))
+				.ToListAsync();
+		}
+
+
 		public async Task<int> CountByExamIdAndTeacherIdAsync(long examId, int teacherId, ExamStudentStatus? statusFilter = null)
 		{
 			var query = _context.ExamStudents

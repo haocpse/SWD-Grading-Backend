@@ -1,4 +1,8 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using BLL.Exceptions;
+using DocumentFormat.OpenXml.Office2010.Excel;
+using Model.Entity;
+using Model.Enums;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace SWD_Grading.Helper
@@ -11,9 +15,21 @@ namespace SWD_Grading.Helper
 					 ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
 			if (string.IsNullOrEmpty(id))
-				throw new Exception("UserId claim not found");
+				throw new AppException("UserId claim not found");
 
 			return int.Parse(id);
+		}
+
+		public static UserRole GetUserRole(this ClaimsPrincipal user) 
+		{
+			var role = user.FindFirst(ClaimTypes.Role)?.Value;
+			if (string.IsNullOrEmpty(role))
+				throw new AppException("Role claim not found");
+
+			if (!Enum.TryParse<UserRole>(role, out var userRole))
+				throw new AppException("Invalid role value in token");
+
+			return userRole;
 		}
 	}
 }

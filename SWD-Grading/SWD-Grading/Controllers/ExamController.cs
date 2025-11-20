@@ -7,6 +7,7 @@ using BLL.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Model.Enums;
 using Model.Request;
 using Model.Response;
 using SWD_Grading.Helper;
@@ -42,8 +43,16 @@ namespace SWD_Grading.Controllers
 		[HttpGet]
 		public async Task<IActionResult> GetAllExams([FromQuery] ExamFilter filter)
 		{
-			var result = await _examService.GetAllAsync(filter);
 
+			var userRole = User.GetUserRole();
+			var result = new PagingResponse<ExamResponse>();
+			if (userRole.Equals(UserRole.TEACHER))
+			{
+				var userId = User.GetUserId();
+				result = await _examService.GetAssignedExam(filter, userId);
+			}
+			else
+				result = await _examService.GetAllAsync(filter);
 			BaseResponse<PagingResponse<ExamResponse>> response = new()
 			{
 				Code = 200,
@@ -161,8 +170,15 @@ namespace SWD_Grading.Controllers
 		[HttpGet("{examId}/students")]
 		public async Task<IActionResult> GetExamStudents(long examId, [FromQuery] ExamStudentFilter filter)
 		{
-			var result = await _examStudentService.GetExamStudentsByExamIdAsync(examId, filter);
-
+			var userRole = User.GetUserRole();
+			var result = new PagingResponse<ExamStudentResponse>();
+			if (userRole.Equals(UserRole.TEACHER))
+			{
+				var userId = User.GetUserId();
+				result = await _examStudentService.GetAssignedExamStudent(userId, examId, filter);
+			}
+			else
+				result = await _examStudentService.GetExamStudentsByExamIdAsync(examId, filter);
 			BaseResponse<PagingResponse<ExamStudentResponse>> response = new()
 			{
 				Code = 200,
@@ -192,7 +208,8 @@ namespace SWD_Grading.Controllers
 		public async Task<IActionResult> ExportGradeExcel([FromRoute] long id)
 		{
 			int userId = User.GetUserId();
-			var result = await _examService.ExportGradeExcel(userId, id);
+			var userRole = User.GetUserRole();
+			var result = await _examService.ExportGradeExcel(userId, userRole, id);
 			BaseResponse<GradeExportResponse> response = new()
 			{
 				Code = 200,
