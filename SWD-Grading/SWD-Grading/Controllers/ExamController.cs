@@ -220,7 +220,7 @@ namespace SWD_Grading.Controllers
 			return Ok(response);
 		}
 
-		[HttpPost("{id}/grade-excel")]
+		[HttpGet("{id}/grade-excel")]
 		public async Task<IActionResult> GradeExcelHistory([FromRoute] long id)
 		{
 			var result = await _examService.GetGradeHistory(id);
