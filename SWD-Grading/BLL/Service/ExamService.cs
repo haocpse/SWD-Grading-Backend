@@ -31,6 +31,7 @@ using Microsoft.Extensions.Configuration;
 using Amazon.S3.Model;
 using OfficeOpenXml;
 using Microsoft.EntityFrameworkCore;
+using DocumentFormat.OpenXml.Office2016.Excel;
 
 namespace BLL.Service
 {
@@ -113,21 +114,42 @@ namespace BLL.Service
 			{
 				throw new Exception("Exam not found");
 			}
-			var examCode = exam.ExamCode; // sửa theo property thực tế
-										  // 1. Copy file vào MemoryStream
+
+			if (file == null || file.Length == 0)
+				throw new AppException("Invalid uploaded file", 400);
+
+			var examCode = exam.ExamCode ?? "NO_CODE";
+
 			using var ms = new MemoryStream();
-			await file.CopyToAsync(ms);
+			try
+			{
+				await file.CopyToAsync(ms);
+			}
+			catch (Exception)
+			{
+				throw new AppException("Failed to read uploaded file", 500);
+			}
 
 			// 2. Đặt Position về 0 để đọc Excel
 			ms.Position = 0;
 			using var doc = SpreadsheetDocument.Open(ms, false);
 
-			var wb = doc.WorkbookPart!;
-			var sheet = wb.Workbook.Sheets!.GetFirstChild<Sheet>()!;
+			var wb = doc.WorkbookPart ?? throw new AppException("WorkbookPart missing", 500);
+			var sheets = wb.Workbook?.Sheets;
+			if (sheets == null || sheets.Count() == 0)
+				throw new AppException("No sheets found in Excel", 400);
+			var sheet = sheets.GetFirstChild<Sheet>();
+			if (sheet == null)
+				throw new AppException("Sheet is empty", 400);
 			var wsPart = (WorksheetPart)wb.GetPartById(sheet.Id!);
+			if (wsPart == null)
+				throw new AppException("WorksheetPart not found", 500);
 			var sheetData = wsPart.Worksheet.GetFirstChild<SheetData>()!;
+			if (sheetData == null)
+				throw new AppException("SheetData missing", 500);
 			var rows = sheetData.Elements<Row>().ToList();
-
+			if (rows.Count < 3)
+				throw new AppException("Template missing header rows", 400);
 			//--------------------------------------------------------------------
 			// 1) READ PART NAME + DESCRIPTIONS → ExamQuestion + Rubric
 			//--------------------------------------------------------------------
@@ -258,8 +280,9 @@ namespace BLL.Service
 			var originalFileUrl = await _s3Service.UploadExcelFileAsync(ms, file.FileName, s3Path);
 
 			// Nếu muốn lưu URL lại trong bảng Exam:
+			bool isOriginalChanged = exam.OriginalExcel != originalFileUrl;
 			exam.OriginalExcel = originalFileUrl;
-
+			
 			// (exam đang được tracking bởi DbContext, chỉ cần gán là đủ)
 			//--------------------------------------------------------------------
 			// 3) SAVE ALL → chỉ SaveChanges 1 lần cho hiệu suất
@@ -288,7 +311,7 @@ namespace BLL.Service
 				saved = true;
 			}
 
-			if (saved)
+			if (isOriginalChanged || saved)
 			{
 				await _unitOfWork.SaveChangesAsync();
 				if (examStudents.Count > 0)
