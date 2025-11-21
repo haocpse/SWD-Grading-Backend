@@ -90,22 +90,53 @@ namespace BLL.Service
 			return gradeDetailResponse;
 		}
 
-		public async Task<long> Create(GradeRequest request)
+
+
+		public async Task<long> Create(GradeCreateRequest request, string teachercode)
 		{
-			var existingGrades = await _unitOfWork.GradeRepository.GetByExamStudentId(request.ExamStudentId);
+			var newGrade = new Grade
+			{
+				ExamStudentId = request.ExamStudentId,
+				TotalScore = 0,
+				Comment = "",
+				GradedAt = DateTime.UtcNow,
+				GradedBy = teachercode,
+				Status = GradeStatus.CREATED
+			};
+            var existingGrades = await _unitOfWork.GradeRepository.GetByExamStudentId(request.ExamStudentId);
             if (existingGrades.Any())
             {
                 int maxAttempt = existingGrades.Max(g => g.Attempt);
-                request.Attempt = maxAttempt + 1;
+                newGrade.Attempt = maxAttempt + 1;
             }
             else
             {
-                request.Attempt = 1;
+                newGrade.Attempt = 1;
             }
-            var gradeEntity = _mapper.Map<Grade>(request);
-			await _unitOfWork.GradeRepository.AddAsync(gradeEntity);
+			await _unitOfWork.GradeRepository.AddAsync(newGrade);
 			await _unitOfWork.SaveChangesAsync();
-			return gradeEntity.Id;
+
+            var questions = await _unitOfWork.ExamQuestionRepository
+                .GetQuestionByExamId(request.ExamId);
+
+            List<GradeDetail> gradeDetails = new();
+
+            foreach (var question in questions)
+            {
+                foreach (var rubric in question.Rubrics)
+                {
+					gradeDetails.Add(new GradeDetail
+					{
+						GradeId = newGrade.Id,
+						Grade = newGrade,
+						Rubric = rubric,
+					});
+                }
+            }
+
+            await _unitOfWork.GradeDetailRepository.AddRangeAsync(gradeDetails);
+			await _unitOfWork.SaveChangesAsync();
+            return newGrade.Id;
 		}
 
 		public async Task CreateRange(long examId, List<AddGradeRangeRequest> requests)
@@ -140,7 +171,7 @@ namespace BLL.Service
 			await _unitOfWork.SaveChangesAsync();
 		}
 
-		public async Task Update(GradeRequest request, long id)
+		public async Task Update(GradeUpdateRequest request, long id)
 		{
 			var existingExamStudent = await _unitOfWork.ExamStudentRepository.GetByIdAsync(request.ExamStudentId);
 			existingExamStudent.Status = ExamStudentStatus.GRADED;
@@ -153,7 +184,9 @@ namespace BLL.Service
 				throw new KeyNotFoundException("Grade not found");
 			}
 			_mapper.Map(request, existingGrade);
-			await _unitOfWork.GradeRepository.UpdateAsync(existingGrade);
+			existingGrade.GradedAt = DateTime.UtcNow;
+			existingGrade.Status = GradeStatus.GRADED;
+            await _unitOfWork.GradeRepository.UpdateAsync(existingGrade);
 			await _unitOfWork.SaveChangesAsync();
 		}
 

@@ -1,4 +1,5 @@
 using BLL.Model.Response;
+using Model.Entity;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -10,6 +11,9 @@ namespace BLL.Interface
 		Task GenerateEmbeddingForDocFileAsync(long docFileId);
 		Task<VerificationResponse> VerifyWithAIAsync(long similarityResultId);
 		Task<VerificationResponse> TeacherVerifyAsync(long similarityResultId, bool isSimilar, string? notes, int userId);
+
+		Task<List<VerificationResponse>> GetConfirmedPlagiarismAsync(long userId);
+
 	}
 }
 

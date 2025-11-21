@@ -26,8 +26,13 @@ namespace BLL.Mapper
 
             // Map GradeDetail entity to GradeDetailModel
             CreateMap<GradeDetail, GradeDetailModel>();
-            CreateMap<GradeRequest, Grade>();
+            CreateMap<GradeUpdateRequest, Grade>();
             CreateMap<AddGradeRangeRequest, Grade>();
+
+            CreateMap<GradeExport, GradeExportResponse>()
+                .ForMember(dest => dest.TeacherCode,
+                    opt => opt.MapFrom(src => src.Teacher.TeacherCode));
+
         }
     }
 }

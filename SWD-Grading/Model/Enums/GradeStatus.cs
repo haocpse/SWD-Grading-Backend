@@ -9,7 +9,6 @@ namespace Model.Enums
     public enum GradeStatus
     {
         CREATED,
-        IN_PROGRESS,
         GRADED
     }
 }

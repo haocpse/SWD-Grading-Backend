@@ -8,6 +8,6 @@ namespace Model.Enums
 {
 	public enum UserRole
 	{
-		TEACHER, STUDENT
+		TEACHER, STUDENT, EXAMINATION
 	}
 }

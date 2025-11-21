@@ -95,6 +95,38 @@ namespace BLL.Service
 			}
 		}
 
+		public async Task<string> UploadExcelFileAsync(Stream fileStream, string fileName, string path)
+		{
+			try
+			{
+				// path truyền vào dạng "EXAMCODE/original-file"
+				var normalizedPath = path.Trim().Trim('/');
+
+				var s3Key = $"{normalizedPath}/{fileName}";
+
+				var uploadRequest = new TransferUtilityUploadRequest
+				{
+					InputStream = fileStream,
+					Key = s3Key,
+					BucketName = _awsConfig.BucketName,
+					CannedACL = S3CannedACL.Private
+				};
+
+				var transferUtility = new TransferUtility(_s3Client);
+				await transferUtility.UploadAsync(uploadRequest);
+
+				return $"https://{_awsConfig.BucketName}.s3.{_awsConfig.Region}.amazonaws.com/{s3Key}";
+			}
+			catch (AmazonS3Exception ex)
+			{
+				throw new Exception($"Error uploading file to S3: {ex.Message}", ex);
+			}
+			catch (Exception ex)
+			{
+				throw new Exception($"Unexpected error uploading file: {ex.Message}", ex);
+			}
+		}
+
 		public async Task<bool> DeleteFileAsync(string path)
 		{
 			try

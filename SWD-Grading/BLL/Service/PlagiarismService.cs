@@ -20,7 +20,7 @@ namespace BLL.Service
 		private readonly ILogger<PlagiarismService> _logger;
 
 		public PlagiarismService(
-			IUnitOfWork unitOfWork, 
+			IUnitOfWork unitOfWork,
 			IVectorService vectorService,
 			IAIVerificationService aiVerificationService,
 			ILogger<PlagiarismService> logger)
@@ -83,18 +83,18 @@ namespace BLL.Service
 			// 6. Ensure Qdrant collection exists
 			await _vectorService.EnsureCollectionExistsAsync();
 
-		// 7. Always re-index when manually calling plagiarism check API to ensure latest data
-		_logger.LogInformation($"[PlagiarismCheck] Re-indexing DocFile {docFileId} (manual check always re-indexes)");
-					await _vectorService.IndexDocumentAsync(
-						docFileId: docFileId,
-						examId: examId,
-						studentCode: studentCode,
-						text: docFile.ParsedText
-					);
-		
-		// Mark as embedded
-		docFile.IsEmbedded = true;
-		await _unitOfWork.SaveChangesAsync();
+			// 7. Always re-index when manually calling plagiarism check API to ensure latest data
+			_logger.LogInformation($"[PlagiarismCheck] Re-indexing DocFile {docFileId} (manual check always re-indexes)");
+			await _vectorService.IndexDocumentAsync(
+				docFileId: docFileId,
+				examId: examId,
+				studentCode: studentCode,
+				text: docFile.ParsedText
+			);
+
+			// Mark as embedded
+			docFile.IsEmbedded = true;
+			await _unitOfWork.SaveChangesAsync();
 
 			// 8. Search for similar documents using Qdrant's vector search
 			_logger.LogInformation($"[PlagiarismCheck] Searching for similar documents in Exam {examId}...");
@@ -120,6 +120,12 @@ namespace BLL.Service
 			var similarityResults = new List<SimilarityResult>();
 			foreach (var pair in similarPairs)
 			{
+				if (await IsIgnoredPair(pair.DocFile1Id, pair.DocFile2Id))
+				{
+					_logger.LogInformation($"[PlagiarismCheck] SKIP pair {pair.DocFile1Id} <-> {pair.DocFile2Id} (teacher has already verified before)");
+					continue;
+				}
+
 				// Get the matched document info
 				var matchedDocFile = await _unitOfWork.DocFileRepository.GetByIdAsync(pair.DocFile2Id);
 				if (matchedDocFile == null) continue;
@@ -152,39 +158,39 @@ namespace BLL.Service
 
 			_logger.LogInformation($"[PlagiarismCheck] ✓ Plagiarism check completed successfully. Check ID: {similarityCheck.Id}");
 
-		// 11. Build response with file paths
-		var response = new PlagiarismCheckResponse
-		{
-			CheckId = similarityCheck.Id,
-			ExamId = examId,
-			ExamCode = exam.ExamCode,
-			CheckedAt = similarityCheck.CheckedAt,
-			Threshold = threshold,
-			TotalPairsChecked = similarPairs.Count,
-			SuspiciousPairsCount = similarPairs.Count,
-			CheckedByUsername = user.Username,
-			SuspiciousPairs = similarityResults.Select(result => 
+			// 11. Build response with file paths
+			var response = new PlagiarismCheckResponse
 			{
-				var matchedDocFile = _unitOfWork.DocFileRepository.GetByIdAsync(result.DocFile2Id).Result;
-				
-				return new SimilarityPairResponse
+				CheckId = similarityCheck.Id,
+				ExamId = examId,
+				ExamCode = exam.ExamCode,
+				CheckedAt = similarityCheck.CheckedAt,
+				Threshold = threshold,
+				TotalPairsChecked = similarPairs.Count,
+				SuspiciousPairsCount = similarPairs.Count,
+				CheckedByUsername = user.Username,
+				SuspiciousPairs = similarityResults.Select(result =>
 				{
-					ResultId = result.Id,
-					Student1Code = result.Student1Code ?? "Unknown",
-					Student2Code = result.Student2Code ?? "Unknown",
-					DocFile1Name = docFile.FileName,
-					DocFile2Name = matchedDocFile?.FileName,
-					DocFile1Id = result.DocFile1Id,
-					DocFile2Id = result.DocFile2Id,
-					SimilarityScore = result.SimilarityScore,
-					// Return file paths from DocFile records
-					DocFile1Path = docFile.FilePath,
-					DocFile2Path = matchedDocFile?.FilePath
-				};
-			}).ToList()
-		};
+					var matchedDocFile = _unitOfWork.DocFileRepository.GetByIdAsync(result.DocFile2Id).Result;
 
-		return response;
+					return new SimilarityPairResponse
+					{
+						ResultId = result.Id,
+						Student1Code = result.Student1Code ?? "Unknown",
+						Student2Code = result.Student2Code ?? "Unknown",
+						DocFile1Name = docFile.FileName,
+						DocFile2Name = matchedDocFile?.FileName,
+						DocFile1Id = result.DocFile1Id,
+						DocFile2Id = result.DocFile2Id,
+						SimilarityScore = result.SimilarityScore,
+						// Return file paths from DocFile records
+						DocFile1Path = docFile.FilePath,
+						DocFile2Path = matchedDocFile?.FilePath
+					};
+				}).ToList()
+			};
+
+			return response;
 		}
 
 		public async Task GenerateEmbeddingForDocFileAsync(long docFileId)
@@ -205,10 +211,10 @@ namespace BLL.Service
 				return;
 			}
 
-		// Check if already embedded (for automatic background job processing)
-		if (docFile.IsEmbedded)
+			// Check if already embedded (for automatic background job processing)
+			if (docFile.IsEmbedded)
 			{
-			_logger.LogInformation($"[GenerateEmbedding] DocFile {docFileId} is already embedded, skipping");
+				_logger.LogInformation($"[GenerateEmbedding] DocFile {docFileId} is already embedded, skipping");
 				return;
 			}
 
@@ -236,9 +242,9 @@ namespace BLL.Service
 				text: docFile.ParsedText
 			);
 
-		// Mark as embedded
-		docFile.IsEmbedded = true;
-		await _unitOfWork.SaveChangesAsync();
+			// Mark as embedded
+			docFile.IsEmbedded = true;
+			await _unitOfWork.SaveChangesAsync();
 
 			_logger.LogInformation($"[GenerateEmbedding] ✓ Successfully generated and indexed embedding for DocFile {docFileId}");
 		}
@@ -288,10 +294,10 @@ namespace BLL.Service
 			);
 
 			// Update similarity result
-			similarityResult.VerificationStatus = aiResult.IsSimilar 
-				? VerificationStatus.AIVerified_Similar 
+			similarityResult.VerificationStatus = aiResult.IsSimilar
+				? VerificationStatus.AIVerified_Similar
 				: VerificationStatus.AIVerified_NotSimilar;
-			
+
 			similarityResult.AIVerificationResult = System.Text.Json.JsonSerializer.Serialize(new
 			{
 				isSimilar = aiResult.IsSimilar,
@@ -299,7 +305,7 @@ namespace BLL.Service
 				summary = aiResult.Summary,
 				analysis = aiResult.Analysis
 			});
-			
+
 			similarityResult.AIVerifiedAt = DateTime.UtcNow;
 
 			await _unitOfWork.SaveChangesAsync();
@@ -347,10 +353,10 @@ namespace BLL.Service
 			}
 
 			// Update verification status
-			similarityResult.VerificationStatus = isSimilar 
-				? VerificationStatus.TeacherConfirmed_Similar 
+			similarityResult.VerificationStatus = isSimilar
+				? VerificationStatus.TeacherConfirmed_Similar
 				: VerificationStatus.TeacherConfirmed_NotSimilar;
-			
+
 			similarityResult.TeacherVerifiedByUserId = userId;
 			similarityResult.TeacherVerifiedAt = DateTime.UtcNow;
 			similarityResult.TeacherNotes = notes;
@@ -400,6 +406,95 @@ namespace BLL.Service
 				TeacherVerifiedAt = similarityResult.TeacherVerifiedAt
 			};
 		}
+		private async Task<bool> IsIgnoredPair(long docFileId1, long docFileId2)
+		{
+			var db = _unitOfWork.SimilarityCheckRepository.GetDbContext();
+
+			return await db.Set<SimilarityResult>()
+				.AnyAsync(sr =>
+				(
+					(sr.DocFile1Id == docFileId1 && sr.DocFile2Id == docFileId2) ||
+					(sr.DocFile1Id == docFileId2 && sr.DocFile2Id == docFileId1)
+				)
+				&&
+				(
+					sr.VerificationStatus == VerificationStatus.TeacherConfirmed_Similar ||
+					sr.VerificationStatus == VerificationStatus.TeacherConfirmed_NotSimilar
+				)
+			);
+		}
+
+		public async Task<List<VerificationResponse>> GetConfirmedPlagiarismAsync(long userId)
+		{
+			var list = new List<VerificationResponse>();
+			var results = await _unitOfWork.SimilarityResultRepository.GetConfirmedPlagiarismAsync(userId);
+
+			foreach (var sr in results)
+			{
+				var (aiSimilar, aiScore, aiSummary, aiAnalysis) =
+					ParseAIVerification(sr.AIVerificationResult);
+
+				list.Add(new VerificationResponse
+				{
+					SimilarityResultId = sr.Id,
+					Student1Code = sr.Student1Code ?? "",
+					Student2Code = sr.Student2Code ?? "",
+					SimilarityScore = sr.SimilarityScore,
+					VerificationStatus = sr.VerificationStatus,
+					VerificationStatusText = sr.VerificationStatus.ToString(),
+
+					// AI
+					AIVerifiedSimilar = aiSimilar,
+					AIConfidenceScore = aiScore,
+					AISummary = aiSummary ?? "",
+					AIAnalysis = aiAnalysis ?? "",
+					AIVerifiedAt = sr.AIVerifiedAt,
+
+					// Teacher
+					TeacherVerifiedSimilar = sr.VerificationStatus == VerificationStatus.TeacherConfirmed_Similar,
+					TeacherUsername = sr.TeacherVerifiedByUser?.Username ?? "",
+					TeacherNotes = sr.TeacherNotes ?? "",
+					TeacherVerifiedAt = sr.TeacherVerifiedAt
+				});
+			}
+
+			return list;
+		}
+
+		private (bool? IsSimilar, decimal? Confidence, string? Summary, string? Analysis) ParseAIVerification(string? jsonString)
+		{
+			if (string.IsNullOrWhiteSpace(jsonString))
+				return (null, null, null, null);
+
+			try
+			{
+				var doc = System.Text.Json.JsonDocument.Parse(jsonString);
+				var root = doc.RootElement;
+
+				bool? isSimilar = root.TryGetProperty("isSimilar", out var p1)
+					? p1.GetBoolean()
+					: null;
+
+				decimal? confidence = root.TryGetProperty("confidenceScore", out var p2)
+					? p2.GetDecimal()
+					: null;
+
+				string? summary = root.TryGetProperty("summary", out var p3)
+					? p3.GetString()
+					: null;
+
+				string? analysis = root.TryGetProperty("analysis", out var p4)
+					? p4.GetString()
+					: null;
+
+				return (isSimilar, confidence, summary, analysis);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "Failed to parse AIVerificationResult JSON.");
+				return (null, null, null, null);
+			}
+		}
 	}
 
 	// Extension method to get DbContext from repository
@@ -408,7 +503,7 @@ namespace BLL.Service
 		public static DAL.SWDGradingDbContext GetDbContext(this ISimilarityCheckRepository repository)
 		{
 			// Access the internal context through reflection
-			var field = repository.GetType().GetField("_context", 
+			var field = repository.GetType().GetField("_context",
 				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 			return (DAL.SWDGradingDbContext)field!.GetValue(repository)!;
 		}

@@ -73,9 +73,10 @@ namespace SWD_Grading.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateGrade([FromBody] GradeRequest request)
+        public async Task<IActionResult> CreateGrade([FromBody] GradeCreateRequest request)
         {
-           await _gradeService.Create(request);
+            var teacherCode = User.FindFirst("TeacherCode")?.Value;
+            await _gradeService.Create(request, teacherCode);
            var response = new BaseResponse<object>
             {
                 Code = 201,
@@ -86,7 +87,7 @@ namespace SWD_Grading.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateGrade(long id, [FromBody] GradeRequest request)
+        public async Task<IActionResult> UpdateGrade(long id, [FromBody] GradeUpdateRequest request)
         {
             try
             {

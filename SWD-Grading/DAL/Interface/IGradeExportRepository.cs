@@ -1,0 +1,17 @@
+﻿using DAL.Repository;
+using Model.Entity;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DAL.Interface
+{
+	public interface IGradeExportRepository : IGenericRepository<GradeExport, long>
+	{
+
+		Task<List<GradeExport>> GetGradeExportByExamId(long examId);
+		Task<List<GradeExport>> GetGradeExportByTeacherIdAndExamId(int teacherId, long examId);
+	}
+}

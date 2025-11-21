@@ -106,6 +106,10 @@ namespace BLL.Service
 - Common software design terminology (e.g., ""use case"", ""class diagram"", ""MVC pattern"") is expected and NOT plagiarism
 - Standard software design patterns and best practices are common knowledge
 - Focus on unique explanations, specific examples, and overall document structure
+- These are exam-style question–answer submissions. It is normal and expected that both students follow the same question order and structure.
+- Identical structure, numbering, or section headers SHOULD NOT be considered plagiarism.
+- Completely ignore all structural similarities and focus ONLY on the internal content.
+- Only evaluate plagiarism if the actual explanations, reasoning, examples, and wording are unusually similar beyond what is expected from answering the same questions.
 
 **Response Format (STRICTLY follow this JSON format):**
 {{
@@ -115,7 +119,8 @@ namespace BLL.Service
   ""analysis"": ""Detailed analysis explaining your decision, including specific examples of similarities or differences. Maximum 500 words.""
 }}
 
-Provide your response as valid JSON only, no additional text.";
+Provide your response as valid JSON only, no additional text.
+Your entire response MUST be written in Vietnamese.";
 		}
 
 		private AIVerificationResult ParseAIResponse(string aiResponse)

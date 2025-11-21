@@ -1,4 +1,5 @@
 using BLL.Model.Response;
+using Model.Entity;
 using Model.Request;
 using Model.Response;
 using System;
@@ -12,7 +13,9 @@ namespace BLL.Interface
 	public interface IExamStudentService
 	{
 		Task<PagingResponse<ExamStudentResponse>> GetExamStudentsByExamIdAsync(long examId, ExamStudentFilter filter);
+		Task<PagingResponse<ExamStudentResponse>> GetAssignedExamStudent(int userId, long examId, ExamStudentFilter filter);
 	}
 }
+
 
 

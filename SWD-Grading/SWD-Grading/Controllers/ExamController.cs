@@ -2,11 +2,15 @@
 using BLL.Model.Request.Exam;
 using BLL.Model.Response;
 using BLL.Model.Response.Exam;
+using BLL.Model.Response.Grade;
 using BLL.Service;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Model.Enums;
 using Model.Request;
 using Model.Response;
+using SWD_Grading.Helper;
 
 namespace SWD_Grading.Controllers
 {
@@ -39,8 +43,16 @@ namespace SWD_Grading.Controllers
 		[HttpGet]
 		public async Task<IActionResult> GetAllExams([FromQuery] ExamFilter filter)
 		{
-			var result = await _examService.GetAllAsync(filter);
 
+			var userRole = User.GetUserRole();
+			var result = new PagingResponse<ExamResponse>();
+			if (userRole.Equals(UserRole.TEACHER))
+			{
+				var userId = User.GetUserId();
+				result = await _examService.GetAssignedExam(filter, userId);
+			}
+			else
+				result = await _examService.GetAllAsync(filter);
 			BaseResponse<PagingResponse<ExamResponse>> response = new()
 			{
 				Code = 200,
@@ -105,27 +117,39 @@ namespace SWD_Grading.Controllers
 				return BadRequest("No file uploaded.");
 
 			var tempFilePath = Path.GetTempFileName();
-			using (var stream = new FileStream(tempFilePath, FileMode.Create))
-			{
-				await file.CopyToAsync(stream);
-			}
 
-			string rawText;
 			try
 			{
-				rawText = await _ocrService.ExtractText(id, tempFilePath, file, "eng");
+				using (var stream = new FileStream(tempFilePath, FileMode.Create))
+				{
+					await file.CopyToAsync(stream);
+				}
+
+				string url = await _ocrService.ExtractText(id, tempFilePath, file, "eng");
+
+				return Ok(new
+				{
+					code = 200,
+					message = "OCR completed successfully",
+					problemStatement = url
+				});
+			}
+			catch (Exception ex)
+			{
+				// Log lỗi
+				Console.WriteLine("OCR ERROR: " + ex);
+
+				return StatusCode(500, new
+				{
+					code = 500,
+					message = "Internal Server Error",
+					detail = ex.Message
+				});
 			}
 			finally
 			{
 				System.IO.File.Delete(tempFilePath);
 			}
-			Console.WriteLine(rawText);
-			return Ok(new
-			{
-				code = 200,
-				message = "OCR completed successfully",
-				problemStatement = rawText
-			});
 		}
 
 		[HttpPost("{id}/details")]
@@ -146,8 +170,15 @@ namespace SWD_Grading.Controllers
 		[HttpGet("{examId}/students")]
 		public async Task<IActionResult> GetExamStudents(long examId, [FromQuery] ExamStudentFilter filter)
 		{
-			var result = await _examStudentService.GetExamStudentsByExamIdAsync(examId, filter);
-
+			var userRole = User.GetUserRole();
+			var result = new PagingResponse<ExamStudentResponse>();
+			if (userRole.Equals(UserRole.TEACHER))
+			{
+				var userId = User.GetUserId();
+				result = await _examStudentService.GetAssignedExamStudent(userId, examId, filter);
+			}
+			else
+				result = await _examStudentService.GetExamStudentsByExamIdAsync(examId, filter);
 			BaseResponse<PagingResponse<ExamStudentResponse>> response = new()
 			{
 				Code = 200,
@@ -172,5 +203,43 @@ namespace SWD_Grading.Controllers
 			return Ok(response);
 		}
 
+		[HttpPost("{id}/export-excel")]
+		[Authorize]
+		public async Task<IActionResult> ExportGradeExcel([FromRoute] long id)
+		{
+			int userId = User.GetUserId();
+			var userRole = User.GetUserRole();
+			var result = await _examService.ExportGradeExcel(userId, userRole, id);
+			BaseResponse<GradeExportResponse> response = new()
+			{
+				Code = 200,
+				Message = "Get exam questions successfully",
+				Data = result
+			};
+
+			return Ok(response);
+		}
+
+		[HttpGet("{id}/grade-excel")]
+		public async Task<IActionResult> GradeExcelHistory([FromRoute] long id)
+		{
+			var userRole = User.GetUserRole();
+			var result = new List<GradeExportResponse>();
+			if (userRole.Equals(UserRole.EXAMINATION))
+				result = await _examService.GetGradeHistory(id);
+			else
+			{
+				var userId = User.GetUserId();
+				result = await _examService.GetMyGradeHistory(userId, id);
+			}
+			BaseResponse<List<GradeExportResponse>> response = new()
+			{
+				Code = 200,
+				Message = "Get exam questions successfully",
+				Data = result
+			};
+
+			return Ok(response);
+		}
 	}
 }
