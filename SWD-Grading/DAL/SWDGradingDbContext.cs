@@ -227,7 +227,7 @@ namespace DAL
 					  .HasColumnType("DECIMAL(5,2)");
 
 				entity.Property(e => e.Comment)
-					  .HasColumnType("TEXT");
+					  .HasColumnType("NVARCHAR(MAX)");
 
 				entity.Property(e => e.GradedAt)
 					  .HasColumnType("DATETIME");
