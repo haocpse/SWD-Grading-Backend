@@ -503,7 +503,8 @@ namespace BLL.Service
 				//---------------------------------------------------------
 				// 3. Mapping rubric row
 				//---------------------------------------------------------
-				int colD = 3, colL = 11;
+				int colD = 3, colL = 11;  
+				int commentColumn = 13;   
 				Row rubricRow = rows[1];
 				var rubricCells = rubricRow.Elements<Cell>().ToList();
 				if (rubricCells.Count <= colL)
@@ -516,7 +517,7 @@ namespace BLL.Service
 					if (!string.IsNullOrWhiteSpace(name))
 						rubricMap[name.Trim()] = col;
 				}
-
+				
 				//---------------------------------------------------------
 				// 4. Load student scores
 				//---------------------------------------------------------
@@ -587,6 +588,12 @@ namespace BLL.Service
 						// Ghi giá trị
 						cell.CellValue = new CellValue(score.ToString());
 						cell.DataType = CellValues.Number;
+					}
+					if (!string.IsNullOrWhiteSpace(grade.Comment))
+					{
+						var commentCell = GetOrCreateCell(wsPart, row, commentColumn);
+						commentCell.CellValue = new CellValue(grade.Comment);
+						commentCell.DataType = CellValues.String;
 					}
 				}
 				// ❗ BẢO TOÀN CÔNG THỨC → KHÔNG XOÁ calcChain
