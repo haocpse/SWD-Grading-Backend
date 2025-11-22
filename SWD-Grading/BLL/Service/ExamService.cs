@@ -526,23 +526,25 @@ namespace BLL.Service
 				else
 					examStudents = await _unitOfWork.ExamStudentRepository.GetExamStudentByExamId(id);
 
+				var teacher = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+
 				if (examStudents == null)
 					throw new AppException("Failed to load exam students", 500);
 
-				if (examStudents.Count == 0)
-					throw new AppException("No students found for this exam", 404);
+				//if (examStudents.Count == 0)
+				//	throw new AppException("No students found for this exam", 404);
 				int rowStart = 3;
 
 				if (role.Equals(UserRole.TEACHER))
 				{
-					var first = examStudents[0];
-					if (first.Teacher == null)
+					//var first = examStudents[0];
+					if (teacher == null)
 						throw new AppException("Missing teacher information", 500);
 
-					if (string.IsNullOrWhiteSpace(first.Teacher.TeacherCode))
+					if (string.IsNullOrWhiteSpace(teacher.TeacherCode))
 						throw new AppException("Teacher code is missing", 500);
 
-					HideOtherTeacherRows(doc, wsPart, first.Teacher.TeacherCode);
+					HideOtherTeacherRows(doc, wsPart, teacher.TeacherCode);
 				}
 
 				rows = ws.GetFirstChild<SheetData>()!.Elements<Row>().ToList();
@@ -679,7 +681,7 @@ namespace BLL.Service
 
 			int markerColIndex = 2; // Column C
 
-			foreach (var row in rows.Where(r => r.RowIndex >= 3))
+			foreach (var row in rows.Where(r => r.RowIndex >= 4))
 			{
 				var markerCell = GetOrCreateCell(wsPart, row, markerColIndex);
 				string markerValue = GetCellValue(doc, markerCell)?.Trim() ?? "";
