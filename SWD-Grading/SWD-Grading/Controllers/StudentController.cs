@@ -5,6 +5,7 @@ using BLL.Model.Response;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using BLL.Service;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SWD_Grading.Controllers
 {
