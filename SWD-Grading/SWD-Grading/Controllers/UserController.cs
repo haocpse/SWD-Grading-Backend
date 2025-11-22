@@ -8,11 +8,13 @@ using SWD_Grading.Helper;
 using BLL.Model.Request.Exam;
 using Model.Response;
 using Model.Request;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SWD_Grading.Controllers
 {
 	[Route("api/me")]
 	[ApiController]
+	[Authorize]
 	public class UserController : ControllerBase
 	{
 

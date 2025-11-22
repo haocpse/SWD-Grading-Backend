@@ -4,11 +4,13 @@ using BLL.Model.Response.Rubric;
 using BLL.Model.Response;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SWD_Grading.Controllers
 {
 	[Route("api/rubrics")]
 	[ApiController]
+	[Authorize]
 	public class RubricController : ControllerBase
 	{
 		private readonly IRubricService _service;

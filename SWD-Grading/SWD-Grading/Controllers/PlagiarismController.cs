@@ -12,6 +12,7 @@ namespace SWD_Grading.Controllers
 {
 	[ApiController]
 	[Route("api/docfile")]
+	[Authorize]
 	public class PlagiarismController : ControllerBase
 	{
 		private readonly IPlagiarismService _plagiarismService;

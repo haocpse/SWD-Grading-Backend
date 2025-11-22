@@ -5,6 +5,7 @@ using BLL.Model.Response;
 using BLL.Model.Response.ExamQuestion;
 using BLL.Model.Response.Rubric;
 using BLL.Service;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,6 +13,7 @@ namespace SWD_Grading.Controllers
 {
 	[Route("api/exam-questions")]
 	[ApiController]
+	[Authorize]
 	public class ExamQuestionController : ControllerBase
 	{
 

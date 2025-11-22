@@ -10,6 +10,7 @@ namespace SWD_Grading.Controllers
 {
 	[Route("api/students")]
 	[ApiController]
+	[Authorize]
 	public class StudentController : ControllerBase
 	{
 		private readonly IStudentService _service;

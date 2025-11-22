@@ -1,6 +1,7 @@
 ﻿using BLL.Interface;
 using BLL.Model.Request.Grade;
 using BLL.Model.Response;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,7 +9,8 @@ namespace SWD_Grading.Controllers
 {
     [Route("api/gradeDetail")]
     [ApiController]
-    public class GradeDetailController : ControllerBase
+	[Authorize]
+	public class GradeDetailController : ControllerBase
     {
         private readonly IGradeDetailService _gradeDetailService;
         public GradeDetailController(IGradeDetailService gradeDetailService)

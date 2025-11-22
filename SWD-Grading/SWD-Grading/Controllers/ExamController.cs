@@ -16,6 +16,7 @@ namespace SWD_Grading.Controllers
 {
 	[Route("api/exams")]
 	[ApiController]
+	[Authorize]
 	public class ExamController : ControllerBase
 	{
 
@@ -204,7 +205,6 @@ namespace SWD_Grading.Controllers
 		}
 
 		[HttpPost("{id}/export-excel")]
-		[Authorize]
 		public async Task<IActionResult> ExportGradeExcel([FromRoute] long id)
 		{
 			int userId = User.GetUserId();

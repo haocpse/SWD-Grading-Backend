@@ -1,5 +1,6 @@
 using BLL.Interface;
 using BLL.Model.Response;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Model.Request;
@@ -14,6 +15,7 @@ namespace SWD_Grading.Controllers
 {
 	[ApiController]
 	[Route("api")]
+	[Authorize]
 	public class ExamUploadController : ControllerBase
 	{
 		private readonly IExamUploadService _examUploadService;

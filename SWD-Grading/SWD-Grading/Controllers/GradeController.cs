@@ -3,6 +3,7 @@ using BLL.Model.Request;
 using BLL.Model.Request.Grade;
 using BLL.Model.Response;
 using BLL.Model.Response.Grade;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +11,8 @@ namespace SWD_Grading.Controllers
 {
     [Route("api/grade")]
     [ApiController]
-    public class GradeController : ControllerBase
+	[Authorize]
+	public class GradeController : ControllerBase
     {
         private readonly IGradeService _gradeService;
         public GradeController(IGradeService gradeService)
